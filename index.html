@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPCX 波段交易面板</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:           #f9f9f7;
+    --surface:        #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --hairline:       #e1e0d9;
+    --border:         rgba(11, 11, 11, 0.10);
+    --gain:           #006300;
+    --gain-wash:      rgba(12, 163, 12, 0.10);
+    --loss:           #d03b3b;
+    --loss-wash:      rgba(208, 59, 59, 0.10);
+    --risk-high:      #ec835a;
+    --accent:         #2a78d6;
+    --accent-wash:    rgba(42, 120, 214, 0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page:           #0d0d0d;
+      --surface:        #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --hairline:       #2c2c2a;
+      --border:         rgba(255, 255, 255, 0.10);
+      --gain:           #0ca30c;
+      --loss:           #d03b3b;
+      --accent:         #3987e5;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:           #0d0d0d;
+    --surface:        #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --hairline:       #2c2c2a;
+    --border:         rgba(255, 255, 255, 0.10);
+    --gain:           #0ca30c;
+    --loss:           #d03b3b;
+    --accent:         #3987e5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--page);
+    color: var(--text-primary);
+    line-height: 1.5;
+    padding: 24px 16px 48px;
+  }
+
+  .panel { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+  /* ---------- header ---------- */
+  header h1 { font-size: 22px; font-weight: 700; }
+  header .subtitle { color: var(--text-secondary); font-size: 14px; margin-top: 2px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .chip {
+    font-size: 12px; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--text-secondary);
+  }
+  .chip.risk {
+    color: var(--risk-high); border-color: var(--risk-high); font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .chip.risk::before { content: "▲"; font-size: 10px; }
+
+  /* ---------- cards ---------- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .card h2 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .card h2 .note { font-size: 12px; font-weight: 400; color: var(--text-muted); margin-left: 6px; }
+
+  /* ---------- hero price ---------- */
+  .hero .label { font-size: 13px; color: var(--text-secondary); }
+  .hero .value { font-size: 48px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero .delta { font-size: 18px; font-weight: 600; margin-left: 10px; }
+
+  /* ---------- inputs ---------- */
+  .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  .field input {
+    width: 100%; padding: 8px 10px; font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    background: var(--page); color: var(--text-primary);
+    border: 1px solid var(--hairline); border-radius: 8px;
+  }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+
+  /* ---------- KPI tiles ---------- */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .tile { border: 1px solid var(--hairline); border-radius: 10px; padding: 12px 14px; }
+  .tile .t-label { font-size: 12px; color: var(--text-secondary); }
+  .tile .t-value { font-size: 22px; font-weight: 700; margin-top: 2px; }
+
+  .pos { color: var(--gain); }
+  .neg { color: var(--loss); }
+
+  /* ---------- tables ---------- */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    text-align: right; font-weight: 500; font-size: 12px; color: var(--text-muted);
+    padding: 6px 10px; border-bottom: 1px solid var(--hairline); white-space: nowrap;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  td {
+    text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--hairline);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  .empty-state {
+    text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px 10px;
+  }
+
+  /* ---------- trade log form ---------- */
+  .log-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
+  .log-form .field { flex: 1 1 120px; }
+  button {
+    font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px;
+    border: 1px solid var(--border); cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-ghost { background: none; color: var(--text-secondary); }
+  .btn-ghost:hover { background: var(--accent-wash); }
+  .btn-del {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 13px; padding: 2px 6px;
+  }
+  .btn-del:hover { color: var(--loss); }
+
+  /* ---------- footer ---------- */
+  footer { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="panel">
+
+  <header>
+    <h1>SPCX 波段交易面板</h1>
+    <div class="subtitle">Cutting Salami · 切香肠复利策略</div>
+    <div class="chip-row">
+      <span class="chip">手动定价 · 本地会话</span>
+      <span class="chip risk">HIGH</span>
+      <span class="chip">建仓 $<span id="chipCost">145</span></span>
+    </div>
+  </header>
+
+  <section class="card hero">
+    <div class="label">当前股价</div>
+    <div>
+      <span class="value" id="heroPrice">$168.50</span>
+      <span class="delta" id="heroDelta">+16.2%</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>手动输入价格</h2>
+    <div class="input-grid">
+      <div class="field">
+        <label for="inPrice">当前股价 ($)</label>
+        <input type="number" id="inPrice" step="0.01" min="0" value="168.50">
+      </div>
+      <div class="field">
+        <label for="inCost">建仓均价 ($)</label>
+        <input type="number" id="inCost" step="0.01" min="0" value="145">
+      </div>
+      <div class="field">
+        <label for="inShares">持仓股数</label>
+        <input type="number" id="inShares" step="1" min="0" value="48">
+      </div>
+      <div class="field">
+        <label for="inFee">单笔交易费 ($)</label>
+        <input type="number" id="inFee" step="0.01" min="0" value="2">
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>持仓概览</h2>
+    <div class="kpi-row">
+      <div class="tile">
+        <div class="t-label">总成本</div>
+        <div class="t-value" id="kpiCost">$6,960</div>
+      </div>
+      <div class="tile">
+        <div class="t-label">当前市值</div>
+        <div class="t-value" id="kpiValue">$8,088</div>
+      </div>
+      <div class="tile">
+        <div class="t-label">浮动盈亏</div>
+        <div class="t-value" id="kpiPnl">+$1,128</div>
+      </div>
+      <div class="tile">
+        <div class="t-label">浮盈比例</div>
+        <div class="t-value" id="kpiPct">+16.2%</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>分批卖出净利润<span class="note">已扣手续费</span></h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>卖出比例</th><th>股数</th><th>卖出金额</th><th>净利润</th></tr>
+        </thead>
+        <tbody id="tblSell"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>卖出后建议回补价位<span class="note">以半仓卖出所得计算回补</span></h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>回撤幅度</th><th>回补价</th><th>较建仓价</th><th>可回补股数</th><th>净增股数</th></tr>
+        </thead>
+        <tbody id="tblRebuy"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>波段交易记录</h2>
+    <div class="log-form">
+      <div class="field">
+        <label for="logPrice">卖出价 ($)</label>
+        <input type="number" id="logPrice" step="0.01" min="0" placeholder="168.50">
+      </div>
+      <div class="field">
+        <label for="logShares">卖出股数</label>
+        <input type="number" id="logShares" step="1" min="1" placeholder="24">
+      </div>
+      <button class="btn-primary" id="btnLog">＋ 记录本次卖出</button>
+      <button class="btn-ghost" id="btnClear">清空记录</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>日期</th><th>卖出价</th><th>股数</th><th>净利润</th><th></th></tr>
+        </thead>
+        <tbody id="tblLog"></tbody>
+      </table>
+      <div class="empty-state" id="logEmpty">暂无记录 — 卖出后点击"记录本次卖出"开始追踪</div>
+    </div>
+    <div class="kpi-row" style="margin-top:14px">
+      <div class="tile">
+        <div class="t-label">累计已实现利润</div>
+        <div class="t-value" id="statProfit">$0</div>
+      </div>
+      <div class="tile">
+        <div class="t-label">累计交易次数</div>
+        <div class="t-value" id="statCount">0</div>
+      </div>
+      <div class="tile">
+        <div class="t-label">累计复利收益率</div>
+        <div class="t-value" id="statReturn">0.0%</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    价格与持仓需手动更新，本面板不连接实时行情。交易记录保存在本次会话的本地存储中，仅你可见。<br>
+    不构成投资建议，波段操作请自行评估风险。
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STATE_KEY  = "spcx-panel-state";
+  var TRADES_KEY = "spcx-panel-trades";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var inputs = { price: $("inPrice"), cost: $("inCost"), shares: $("inShares"), fee: $("inFee") };
+
+  function num(el) {
+    var v = parseFloat(el.value);
+    return isFinite(v) && v >= 0 ? v : 0;
+  }
+
+  function money(v, decimals) {
+    var d = decimals === undefined ? 0 : decimals;
+    var sign = v < 0 ? "-" : "";
+    return sign + "$" + Math.abs(v).toLocaleString("en-US", {
+      minimumFractionDigits: d, maximumFractionDigits: d
+    });
+  }
+
+  function signedMoney(v) {
+    return (v >= 0 ? "+" : "-") + money(Math.abs(v));
+  }
+
+  function pct(v, signed) {
+    var s = signed && v >= 0 ? "+" : "";
+    return s + v.toFixed(1) + "%";
+  }
+
+  function pnlClass(v) { return v >= 0 ? "pos" : "neg"; }
+
+  /* ---------- persistence ---------- */
+
+  function loadJSON(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) { return fallback; }
+  }
+
+  function saveState() {
+    localStorage.setItem(STATE_KEY, JSON.stringify({
+      price: inputs.price.value, cost: inputs.cost.value,
+      shares: inputs.shares.value, fee: inputs.fee.value
+    }));
+  }
+
+  var trades = loadJSON(TRADES_KEY, []);
+
+  function saveTrades() {
+    localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
+  }
+
+  var saved = loadJSON(STATE_KEY, null);
+  if (saved) {
+    inputs.price.value  = saved.price;
+    inputs.cost.value   = saved.cost;
+    inputs.shares.value = saved.shares;
+    inputs.fee.value    = saved.fee;
+  }
+
+  /* ---------- render ---------- */
+
+  var SELL_FRACTIONS = [
+    { label: "¼ 仓", f: 0.25 },
+    { label: "⅓ 仓", f: 1 / 3 },
+    { label: "½ 仓", f: 0.5 },
+    { label: "全部", f: 1 }
+  ];
+
+  var PULLBACKS = [0.03, 0.05, 0.08, 0.10];
+
+  function render() {
+    var price  = num(inputs.price);
+    var cost   = num(inputs.cost);
+    var shares = Math.floor(num(inputs.shares));
+    var fee    = num(inputs.fee);
+
+    var totalCost = cost * shares;
+    var value     = price * shares;
+    var pnl       = value - totalCost;
+    var pnlPct    = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+
+    $("chipCost").textContent = cost.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+    $("heroPrice").textContent = money(price, 2);
+    var hd = $("heroDelta");
+    hd.textContent = pct(pnlPct, true);
+    hd.className = "delta " + pnlClass(pnl);
+
+    $("kpiCost").textContent  = money(totalCost);
+    $("kpiValue").textContent = money(value);
+    var kp = $("kpiPnl");
+    kp.textContent = signedMoney(pnl);
+    kp.className = "t-value " + pnlClass(pnl);
+    var kc = $("kpiPct");
+    kc.textContent = pct(pnlPct, true);
+    kc.className = "t-value " + pnlClass(pnl);
+
+    /* 分批卖出净利润 */
+    var sellRows = SELL_FRACTIONS.map(function (t) {
+      var n = Math.floor(shares * t.f);
+      if (n < 1) return "";
+      var proceeds = n * price;
+      var net = (price - cost) * n - fee;
+      return "<tr><td>" + t.label + "</td><td>" + n + "</td><td>" + money(proceeds) +
+             "</td><td class='" + pnlClass(net) + "'>" + signedMoney(net) + "</td></tr>";
+    }).join("");
+    $("tblSell").innerHTML = sellRows ||
+      "<tr><td colspan='4' class='empty-state'>请先输入持仓股数</td></tr>";
+
+    /* 卖出后建议回补价位 — 以半仓卖出所得资金计算 */
+    var halfShares = Math.floor(shares * 0.5);
+    var proceeds = halfShares * price - fee;
+    var rebuyRows = PULLBACKS.map(function (p) {
+      var rp = price * (1 - p);
+      if (rp <= 0) return "";
+      var vsCost = cost > 0 ? ((rp - cost) / cost) * 100 : 0;
+      var canBuy = halfShares > 0 ? Math.floor(proceeds / rp) : 0;
+      var extra = canBuy - halfShares;
+      return "<tr><td>-" + (p * 100).toFixed(0) + "%</td><td>" + money(rp, 2) +
+             "</td><td class='" + pnlClass(vsCost) + "'>" + pct(vsCost, true) +
+             "</td><td>" + canBuy + "</td><td class='" + pnlClass(extra) + "'>" +
+             (extra >= 0 ? "+" : "") + extra + "</td></tr>";
+    }).join("");
+    $("tblRebuy").innerHTML = rebuyRows;
+
+    renderTrades(totalCost);
+  }
+
+  function renderTrades(totalCost) {
+    var body = $("tblLog");
+    body.innerHTML = trades.map(function (t, i) {
+      return "<tr><td>" + t.date + "</td><td>" + money(t.price, 2) + "</td><td>" + t.shares +
+             "</td><td class='" + pnlClass(t.net) + "'>" + signedMoney(t.net) +
+             "</td><td><button class='btn-del' data-i='" + i + "' title='删除'>✕</button></td></tr>";
+    }).join("");
+    $("logEmpty").style.display = trades.length ? "none" : "";
+
+    var realized = trades.reduce(function (s, t) { return s + t.net; }, 0);
+    var sp = $("statProfit");
+    sp.textContent = money(realized);
+    sp.className = "t-value " + (realized > 0 ? "pos" : realized < 0 ? "neg" : "");
+    $("statCount").textContent = trades.length;
+    $("statReturn").textContent = pct(totalCost > 0 ? (realized / totalCost) * 100 : 0);
+  }
+
+  /* ---------- events ---------- */
+
+  Object.keys(inputs).forEach(function (k) {
+    inputs[k].addEventListener("input", function () { saveState(); render(); });
+  });
+
+  $("btnLog").addEventListener("click", function () {
+    var price  = parseFloat($("logPrice").value);
+    var shares = Math.floor(parseFloat($("logShares").value));
+    if (!isFinite(price) || price <= 0 || !isFinite(shares) || shares < 1) {
+      alert("请输入有效的卖出价和卖出股数");
+      return;
+    }
+    var cost = num(inputs.cost);
+    var fee  = num(inputs.fee);
+    var d = new Date();
+    trades.push({
+      date: (d.getMonth() + 1) + "/" + d.getDate() + " " +
+            String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"),
+      price: price,
+      shares: shares,
+      net: (price - cost) * shares - fee
+    });
+    saveTrades();
+    $("logPrice").value = "";
+    $("logShares").value = "";
+    render();
+  });
+
+  $("btnClear").addEventListener("click", function () {
+    if (!trades.length) return;
+    if (confirm("确定清空全部交易记录？此操作不可撤销。")) {
+      trades = [];
+      saveTrades();
+      render();
+    }
+  });
+
+  $("tblLog").addEventListener("click", function (e) {
+    var btn = e.target.closest ? e.target.closest(".btn-del") : null;
+    if (!btn) return;
+    trades.splice(parseInt(btn.getAttribute("data-i"), 10), 1);
+    saveTrades();
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
