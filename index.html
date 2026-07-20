@@ -91,11 +91,6 @@
     display: inline-flex; align-items: center; gap: 5px;
   }
   .chip.risk::before { content: "▲"; font-size: 10px; }
-  .chip.live { color: var(--gain); border-color: var(--gain); font-weight: 600; }
-  .chip.live::before { content: "●"; margin-right: 5px; animation: pulse 2s infinite; }
-  .chip.manual-mode { color: var(--text-muted); }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-  @media (prefers-reduced-motion: reduce) { .chip.live::before { animation: none; } }
 
   /* ---------- cards ---------- */
   .card {
@@ -106,24 +101,21 @@
   .card h2 .note { font-size: 12px; font-weight: 400; color: var(--text-muted); margin-left: 6px; }
 
   /* ---------- hero price ---------- */
-  .hero .label { font-size: 13px; color: var(--text-secondary); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .hero .label { font-size: 13px; color: var(--text-secondary); }
   .hero .value { font-size: 48px; font-weight: 700; letter-spacing: -0.5px; }
   .hero .delta { font-size: 18px; font-weight: 600; margin-left: 10px; }
   .hero .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
-  .status-line { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
-  .status-line.err { color: var(--risk-high); }
 
   /* ---------- inputs ---------- */
   .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
   .field label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
-  .field input, .field select {
+  .field input, .field textarea {
     width: 100%; padding: 8px 10px; font-size: 15px;
     font-variant-numeric: tabular-nums;
     background: var(--page); color: var(--text-primary);
     border: 1px solid var(--hairline); border-radius: 8px;
   }
-  .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
-  .field input:disabled { opacity: 0.55; }
+  .field input:focus, .field textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
 
   /* ---------- KPI tiles ---------- */
   .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
@@ -155,11 +147,17 @@
   }
   .chart-empty { color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px 10px; }
 
+  /* ---------- data editor ---------- */
+  details.data-editor { border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 14px; margin-top: 12px; }
+  details.data-editor summary { font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+  details.data-editor .body { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+  details.data-editor textarea { min-height: 120px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  .data-msg { font-size: 12px; color: var(--text-muted); }
+  .data-msg.err { color: var(--loss); }
+
   /* ---------- signal cards ---------- */
   .signal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-  .signal {
-    border: 1px solid var(--hairline); border-radius: 10px; padding: 14px 16px;
-  }
+  .signal { border: 1px solid var(--hairline); border-radius: 10px; padding: 14px 16px; }
   .signal .s-title { font-size: 13px; color: var(--text-secondary); }
   .signal .s-price { font-size: 28px; font-weight: 700; margin: 4px 0; }
   .signal.sell .s-price { color: var(--gain); }
@@ -214,21 +212,19 @@
     <h1><span id="hdrSymbol">SPCX</span> 波段交易面板</h1>
     <div class="subtitle">Cutting Salami · 切香肠复利策略</div>
     <div class="chip-row">
-      <span class="chip" id="chipMode">手动定价 · 本地会话</span>
+      <span class="chip">手动定价 · 本地会话</span>
       <span class="chip risk">HIGH</span>
       <span class="chip">建仓 $<span id="chipCost">145</span></span>
-      <span class="chip" id="chipName" style="display:none"></span>
     </div>
   </header>
 
   <section class="card hero">
-    <div class="label">当前股价 <span class="chip manual-mode" id="chipLive" style="display:none"></span></div>
+    <div class="label">当前股价</div>
     <div>
       <span class="value" id="heroPrice">--</span>
       <span class="delta" id="heroDelta"></span>
     </div>
     <div class="sub" id="heroSub"></div>
-    <div class="status-line" id="statusLine">正在检测数据源…</div>
   </section>
 
   <section class="card">
@@ -239,14 +235,28 @@
       <button class="range-btn" data-n="132">6月</button>
       <button class="range-btn active" data-n="0">全部</button>
       <span style="flex:1"></span>
-      <span class="chip manual-mode" id="chipBars"></span>
+      <span class="chip" id="chipBars"></span>
     </div>
     <div class="legend" id="legend"></div>
     <div class="chart-wrap" id="chartWrap">
       <canvas id="chart"></canvas>
       <div id="chartTip"></div>
-      <div class="chart-empty" id="chartEmpty" style="display:none"></div>
+      <div class="chart-empty" id="chartEmpty" style="display:none">暂无历史数据 — 在下方"更新历史数据"中粘贴日线即可显示图表</div>
     </div>
+    <details class="data-editor">
+      <summary>更新历史数据（粘贴日线 CSV）</summary>
+      <div class="body">
+        <div class="field">
+          <label for="dataBox">每行一根日线：日期,开盘,最高,最低,收盘,成交量</label>
+          <textarea id="dataBox" placeholder="2026-07-17,127.63,130.33,122.12,123.99,54321973"></textarea>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn-primary" id="btnData">应用数据</button>
+          <button class="btn-ghost" id="btnDataReset">恢复内置数据</button>
+          <span class="data-msg" id="dataMsg"></span>
+        </div>
+      </div>
+    </details>
   </section>
 
   <section class="card">
@@ -258,7 +268,7 @@
       </div>
       <div class="field">
         <label for="inPrice">当前股价 ($)</label>
-        <input type="number" id="inPrice" step="0.01" min="0" value="168.50">
+        <input type="number" id="inPrice" step="0.01" min="0" value="123.99">
       </div>
       <div class="field">
         <label for="inCost">建仓均价 ($)</label>
@@ -419,7 +429,7 @@
   </section>
 
   <footer>
-    实时行情来自你在 claude.ai 连接的 Interactive Brokers 连接器；未连接时可手动输入价格。记录卖出/买回会自动同步持仓股数与建仓均价（删除记录不回滚持仓）。所有数据保存在浏览器本地存储中，仅你可见。<br>
+    本面板完全本地运行，不连接任何行情或账户服务；价格与历史数据需手动更新。所有输入与交易记录保存在浏览器本地存储中，仅本设备可见。记录卖出/买回会自动同步持仓股数与建仓均价（删除记录不回滚持仓）。<br>
     不构成投资建议，波段操作请自行评估风险。
   </footer>
 
@@ -431,11 +441,30 @@
 
   var STATE_KEY  = "spcx-panel-state-v2";
   var TRADES_KEY = "spcx-panel-trades-v2";
+  var HIST_KEY   = "spcx-panel-hist-v1";
   var LEGACY_STATE_KEY  = "spcx-panel-state";
   var LEGACY_TRADES_KEY = "spcx-panel-trades";
 
-  var MCP_SERVER = "Interactive_Brokers_IBKR";
-  var DEFAULT_CONTRACT = { id: 890493863, symbol: "SPCX", name: "SPACE EXPLORATION TECHN-CL A" };
+  // Built-in SPCX daily bars (NASDAQ, since 2026-06-12 IPO; as of 2026-07-17 close).
+  // Update via the data editor — pasted data replaces this set.
+  var EMBEDDED_HIST = {
+    asOf: "2026-07-17",
+    date: ["2026-06-12","2026-06-15","2026-06-16","2026-06-17","2026-06-18","2026-06-22",
+           "2026-06-23","2026-06-24","2026-06-25","2026-06-26","2026-06-29","2026-06-30",
+           "2026-07-01","2026-07-02","2026-07-06","2026-07-07","2026-07-08","2026-07-09",
+           "2026-07-10","2026-07-13","2026-07-14","2026-07-15","2026-07-16","2026-07-17"],
+    o: [150,171.79,200.51,209.84,188.34,176.05,151.13,154.25,156.65,150.62,157.36,163.38,
+        171.56,159.73,165.95,158.92,152.55,150.45,150.13,144.6,140.95,137.51,135.01,127.63],
+    h: [176.52,193,225.64,213.8,190,176.67,165.5,159.86,160.65,158.4,166.17,172.4,
+        171.74,162.16,167.9,159.3,152.93,153.5,150.57,144.92,143.33,139.34,137.76,130.33],
+    l: [135,168.35,195.13,187.01,172.11,154,147.11,150.72,150,148.51,151.73,161.64,
+        155,155.88,155.04,148.87,145.2,147.59,145.07,136.78,135.52,132.15,130.74,122.12],
+    c: [160.95,192.5,201.8,191.82,185,154.6,156.11,154.54,153,153.23,164.19,170.86,
+        157.54,162,160.42,149.47,148.3,152.16,145.3,139.14,136.08,135.27,131.11,123.99],
+    v: [331231076,161336979,191664308,126125119,128571659,109179716,94308384,43510400,
+        36084212,47856419,47774858,51592192,62098097,35106784,55407657,45619361,35555874,
+        29452481,28077718,40527230,28526475,35407582,35437342,54321973]
+  };
 
   var $ = function (id) { return document.getElementById(id); };
   var inputs = {
@@ -462,11 +491,6 @@
     return (d.getMonth() + 1) + "/" + d.getDate() + " " +
       String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
   }
-  function fmtTime(ts) {
-    var d = new Date(ts);
-    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") +
-      ":" + String(d.getSeconds()).padStart(2, "0");
-  }
 
   function loadJSON(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
@@ -476,18 +500,14 @@
   /* ================= state ================= */
 
   var state = {
-    contract: null,           // {id, symbol, name}
-    live: null,               // {price, changePct, change, bid, ask, volume, ts}
-    hist: null,               // {t:[], o:[], h:[], l:[], c:[], v:[]}
-    rangeN: 0,                // visible bars (0 = all)
+    hist: null,     // {t:[], o:[], h:[], l:[], c:[], v:[], asOf, source}
+    rangeN: 0,
     logType: "sell",
-    baseline: null,           // initial capital for compound return
-    mode: "detecting"         // detecting | live | manual | error
+    baseline: null
   };
 
   var trades = loadJSON(TRADES_KEY, null);
   if (trades === null) {
-    // migrate v1 records (sell-only, {date,price,shares,net})
     var legacy = loadJSON(LEGACY_TRADES_KEY, []);
     trades = legacy.map(function (t) {
       return { type: "sell", ts: null, legacyDate: t.date, price: t.price, shares: t.shares, fee: 0, net: t.net };
@@ -505,20 +525,99 @@
     if (saved.wave) inputs.wave.value = saved.wave;
     if (saved.pull) inputs.pull.value = saved.pull;
     if (saved.baseline) state.baseline = saved.baseline;
-    if (saved.contract) state.contract = saved.contract;
   }
   function saveState() {
     localStorage.setItem(STATE_KEY, JSON.stringify({
       ticker: inputs.ticker.value, price: inputs.price.value, cost: inputs.cost.value,
       shares: inputs.shares.value, fee: inputs.fee.value,
       wave: inputs.wave.value, pull: inputs.pull.value,
-      baseline: state.baseline, contract: state.contract
+      baseline: state.baseline
     }));
   }
 
-  function currentPrice() {
-    return state.live ? state.live.price : num(inputs.price);
+  function currentPrice() { return num(inputs.price); }
+
+  /* ================= history data ================= */
+
+  function histFromRows(rows, source) {
+    // rows: [{date, o, h, l, c, v}] sorted ascending
+    return {
+      source: source,
+      asOf: rows.length ? rows[rows.length - 1].date : null,
+      t: rows.map(function (r) { return new Date(r.date + "T00:00:00").getTime(); }),
+      o: rows.map(function (r) { return r.o; }),
+      h: rows.map(function (r) { return r.h; }),
+      l: rows.map(function (r) { return r.l; }),
+      c: rows.map(function (r) { return r.c; }),
+      v: rows.map(function (r) { return r.v; })
+    };
   }
+
+  function embeddedRows() {
+    return EMBEDDED_HIST.date.map(function (d, i) {
+      return { date: d, o: EMBEDDED_HIST.o[i], h: EMBEDDED_HIST.h[i],
+               l: EMBEDDED_HIST.l[i], c: EMBEDDED_HIST.c[i], v: EMBEDDED_HIST.v[i] };
+    });
+  }
+
+  function loadHist() {
+    var custom = loadJSON(HIST_KEY, null);
+    if (custom && custom.rows && custom.rows.length) {
+      state.hist = histFromRows(custom.rows, "custom");
+    } else {
+      state.hist = histFromRows(embeddedRows(), "embedded");
+    }
+  }
+
+  function parseCsv(text) {
+    var rows = [], errs = [];
+    text.split(/\r?\n/).forEach(function (line, i) {
+      line = line.trim();
+      if (!line) return;
+      var p = line.split(/[,\t;]+/).map(function (s) { return s.trim(); });
+      if (p.length < 5) { errs.push("第 " + (i + 1) + " 行列数不足"); return; }
+      var date = p[0].replace(/\//g, "-");
+      if (!/^\d{4}-\d{1,2}-\d{1,2}$/.test(date)) { errs.push("第 " + (i + 1) + " 行日期格式应为 YYYY-MM-DD"); return; }
+      var o = parseFloat(p[1]), h = parseFloat(p[2]), l = parseFloat(p[3]), c = parseFloat(p[4]);
+      var v = p.length > 5 ? parseFloat(p[5]) : 0;
+      if (![o, h, l, c].every(isFinite) || o <= 0 || h <= 0 || l <= 0 || c <= 0) {
+        errs.push("第 " + (i + 1) + " 行价格无效"); return;
+      }
+      rows.push({ date: date, o: o, h: h, l: l, c: c, v: isFinite(v) ? v : 0 });
+    });
+    rows.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    // de-duplicate by date, last wins
+    var seen = {}, out = [];
+    rows.forEach(function (r) { seen[r.date] = r; });
+    Object.keys(seen).sort().forEach(function (k) { out.push(seen[k]); });
+    return { rows: out, errs: errs };
+  }
+
+  $("btnData").addEventListener("click", function () {
+    var res = parseCsv($("dataBox").value);
+    var msg = $("dataMsg");
+    if (!res.rows.length) {
+      msg.textContent = res.errs.length ? res.errs[0] : "未解析到有效数据";
+      msg.className = "data-msg err";
+      return;
+    }
+    localStorage.setItem(HIST_KEY, JSON.stringify({ rows: res.rows }));
+    loadHist();
+    msg.textContent = "已应用 " + res.rows.length + " 根日线" + (res.errs.length ? "（跳过 " + res.errs.length + " 行无效数据）" : "");
+    msg.className = "data-msg";
+    hoverI = -1;
+    render();
+  });
+
+  $("btnDataReset").addEventListener("click", function () {
+    localStorage.removeItem(HIST_KEY);
+    $("dataBox").value = "";
+    loadHist();
+    $("dataMsg").textContent = "已恢复内置数据（截至 " + EMBEDDED_HIST.asOf + "）";
+    $("dataMsg").className = "data-msg";
+    hoverI = -1;
+    render();
+  });
 
   /* ================= indicators ================= */
 
@@ -582,169 +681,11 @@
     return { pct: mdd * 100, from: from, to: to };
   }
 
-  /* ================= MCP live data ================= */
-
-  var unsubs = [];
-  function clearWatches() { unsubs.forEach(function (u) { try { u(); } catch (e) {} }); unsubs = []; }
-
-  function setStatus(text, isErr) {
-    var el = $("statusLine");
-    el.textContent = text;
-    el.className = "status-line" + (isErr ? " err" : "");
-  }
-
-  function mcpErrorText(err) {
-    switch (err && err.code) {
-      case "needs_reauth":
-        return "IBKR 连接已过期 — 请在 claude.ai 设置 → 连接器 中重新连接 Interactive Brokers";
-      case "server_not_connected":
-        return "未找到 IBKR 连接器 — 请在 claude.ai 设置 → 连接器 中添加 Interactive Brokers";
-      case "selection_required":
-        return "存在多个同名 IBKR 连接器 — 请在弹出的提示中选择一个";
-      case "not_in_manifest": case "blocked_by_policy":
-        return "IBKR 连接器访问受限（组织策略或授权范围）";
-      case "approval_required":
-        return "组织策略要求逐次批准该工具调用，页面内暂不支持";
-      case "tool_error":
-        return "IBKR 返回错误：" + (err.message || "未知错误");
-      default:
-        return "行情获取失败（" + ((err && err.code) || "unknown") + "），保留最近数据";
-    }
-  }
-  function isAuthzErr(err) {
-    return err && (err.code === "needs_reauth" || err.code === "server_not_connected" ||
-      err.code === "blocked_by_policy" || err.code === "approval_required");
-  }
-
-  function enterManualMode(reason) {
-    state.mode = "manual";
-    inputs.price.disabled = false;
-    $("chipMode").textContent = "手动定价 · 本地会话";
-    $("chipLive").style.display = "none";
-    $("chartEmpty").style.display = "";
-    $("chartEmpty").textContent = "K 线图需要实时行情 — 在 claude.ai 中打开本面板并连接 Interactive Brokers 连接器后自动加载";
-    $("chart").style.display = "none";
-    setStatus(reason || "手动模式：请自行维护当前股价", false);
-    render();
-  }
-
-  function enterLiveMode() {
-    state.mode = "live";
-    inputs.price.disabled = true;
-    $("chipMode").textContent = "实时行情 · IBKR";
-    $("chart").style.display = "";
-    $("chartEmpty").style.display = "none";
-  }
-
-  function startWatches(contract) {
-    clearWatches();
-    var mcp = window.claude.mcp;
-
-    unsubs.push(mcp.watchTool(MCP_SERVER, "get_price_snapshot", {
-      contract_id: contract.id,
-      market_data_names: ["last", "bid_ask", "change", "volume"]
-    }, function (ev) {
-      if (ev.type === "data") {
-        var p = ev.data ? ev.data : ev.result;
-        onSnapshot(p && p.payload !== undefined ? p.payload : p, p && p.cache);
-      } else {
-        if (isAuthzErr(ev.error)) { state.live = null; enterManualMode(mcpErrorText(ev.error)); }
-        else setStatus(mcpErrorText(ev.error), true);
-      }
-    }, { refetchInterval: 30000 }));
-
-    unsubs.push(mcp.watchTool(MCP_SERVER, "get_price_history", {
-      contract_id: contract.id,
-      security_type: "STK",
-      step: "ONE_DAY",
-      outside_rth: false,
-      period: "ONE_YEAR"
-    }, function (ev) {
-      if (ev.type === "data") {
-        var p = ev.data ? ev.data : ev.result;
-        onHistory(p && p.payload !== undefined ? p.payload : p);
-      } else {
-        if (isAuthzErr(ev.error)) { state.hist = null; enterManualMode(mcpErrorText(ev.error)); }
-        else setStatus(mcpErrorText(ev.error), true);
-      }
-    }, { refetchInterval: 300000 }));
-  }
-
-  function onSnapshot(payload, cache) {
-    if (!payload || !payload.last || payload.last.price == null) return;
-    enterLiveMode();
-    var ba = payload["bid-ask"] || {};
-    state.live = {
-      price: payload.last.price,
-      ts: (payload.last.ts ? payload.last.ts * 1000 : (cache && cache.storedAt) || Date.now()),
-      halted: !!payload.last.halted,
-      change: payload.change ? payload.change.change : null,
-      changePct: payload.change ? payload.change.change_pct : null,
-      bid: ba.bid, ask: ba.ask,
-      volume: payload.volume ? payload.volume.volume : null
-    };
-    inputs.price.value = state.live.price.toFixed(2);
-    saveState();
-    var src = cache ? "缓存 " + fmtTime(cache.storedAt) : "更新 " + fmtTime(state.live.ts);
-    setStatus("实时行情 · " + src + (state.live.halted ? " · 已停牌" : ""), false);
-    render();
-  }
-
-  function onHistory(payload) {
-    if (!payload || !payload.time || !payload.time.length) return;
-    state.hist = {
-      t: payload.time.map(function (s) { return new Date(s).getTime(); }),
-      o: payload.open, h: payload.high, l: payload.low, c: payload.close, v: payload.volume
-    };
-    render();
-  }
-
-  function resolveTicker(query) {
-    var mcp = window.claude.mcp;
-    setStatus("正在搜索 " + query + " …", false);
-    mcp.callTool(MCP_SERVER, "search_contracts", { query: query })
-      .then(function (res) {
-        var rows = (res.payload && res.payload.results) || [];
-        var q = query.toUpperCase();
-        var stk = rows.filter(function (r) {
-          return r.symbol === q && r.underlying_contract_id &&
-            (r.sections || []).some(function (s) { return s.security_type === "STK"; });
-        });
-        var pick = stk.find(function (r) { return r.country_code === "US"; }) || stk[0];
-        if (!pick) { setStatus("未找到代码为 " + q + " 的股票", true); return; }
-        state.contract = { id: pick.underlying_contract_id, symbol: pick.symbol, name: pick.description || "" };
-        state.live = null; state.hist = null;
-        $("hdrSymbol").textContent = pick.symbol;
-        $("chipName").textContent = state.contract.name;
-        $("chipName").style.display = "";
-        saveState();
-        startWatches(state.contract);
-        render();
-      })
-      .catch(function (err) {
-        if (isAuthzErr(err)) enterManualMode(mcpErrorText(err));
-        else setStatus(mcpErrorText(err), true);
-      });
-  }
-
-  function initLive() {
-    if (!window.claude || window.claude.mcp === undefined) {
-      enterManualMode("手动模式：未检测到 claude.ai 运行环境，行情需手动输入");
-      return;
-    }
-    if (!state.contract) state.contract = DEFAULT_CONTRACT;
-    $("hdrSymbol").textContent = state.contract.symbol;
-    if (state.contract.name) { $("chipName").textContent = state.contract.name; $("chipName").style.display = ""; }
-    setStatus("正在连接 Interactive Brokers …", false);
-    startWatches(state.contract);
-  }
-
   /* ================= trades & rounds ================= */
 
-  // FIFO-match sells to later buys → closed lots
   function computeRounds() {
-    var open = [];   // sell legs: {price, shares, remaining, feePerShare}
-    var lots = [];   // {qty, sellPrice, buyPrice, profit}
+    var open = [];
+    var lots = [];
     trades.forEach(function (t) {
       var fps = t.shares > 0 ? (t.fee || 0) / t.shares : 0;
       if (t.type === "sell") {
@@ -811,10 +752,8 @@
       var from = Math.max(0, closes.length - lookback);
       hi20 = Math.max.apply(null, state.hist.h.slice(from));
       lo20 = Math.min.apply(null, state.hist.l.slice(from));
-      var ma20arr = sma(closes, 20);
-      ma20v = ma20arr[last];
-      var rsiArr = rsi(closes, 14);
-      rsiV = rsiArr[last];
+      ma20v = sma(closes, 20)[last];
+      rsiV = rsi(closes, 14)[last];
     }
 
     out.sell = cost * (1 + wave / 100);
@@ -872,12 +811,14 @@
   }
 
   function drawChart() {
-    if (state.mode !== "live" || !state.hist) return;
+    var hasData = state.hist && state.hist.t.length > 0;
+    $("chart").style.display = hasData ? "" : "none";
+    $("chartEmpty").style.display = hasData ? "none" : "";
+    if (!hasData) { $("legend").innerHTML = ""; $("chipBars").textContent = ""; return; }
+
     var vis = visibleHist();
     var n = vis.t.length;
-    if (!n) return;
 
-    // indicators on FULL history, then slice (so MA/RSI are correct at range start)
     var full = state.hist;
     var ma5A = sma(full.c, 5), ma10A = sma(full.c, 10), ma20A = sma(full.c, 20);
     var m = macd(full.c), rsiA = rsi(full.c, 14);
@@ -905,7 +846,6 @@
     var muted = cssVar("--text-muted"), grid = cssVar("--grid");
     var ma5c = cssVar("--ma5"), ma10c = cssVar("--ma10"), ma20c = cssVar("--ma20");
 
-    // ---- price panel scale (include MA + suggestion lines when near range)
     var lo = Math.min.apply(null, vis.l), hi = Math.max.apply(null, vis.h);
     [ma5, ma10, ma20].forEach(function (a) {
       a.forEach(function (v) { if (v !== null) { if (v < lo) lo = v; if (v > hi) hi = v; } });
@@ -916,7 +856,6 @@
 
     ctx.font = "11px system-ui, sans-serif";
 
-    // grid + y labels (price)
     ctx.strokeStyle = grid; ctx.fillStyle = muted; ctx.lineWidth = 1;
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
     for (var g = 0; g <= 4; g++) {
@@ -925,7 +864,6 @@
       ctx.fillText(gv.toFixed(gv >= 1000 ? 0 : 2), padL + plotW + 6, gy);
     }
 
-    // x date ticks
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     var step = Math.max(1, Math.ceil(n / 6));
     for (var ti = 0; ti < n; ti += step) {
@@ -933,7 +871,6 @@
       ctx.fillText((dt.getMonth() + 1) + "/" + dt.getDate(), xAt(ti), H - padB + 6);
     }
 
-    // volume (bottom of price panel)
     var vmax = Math.max.apply(null, vis.v) || 1;
     var volTop = padT + priceH;
     for (var i = 0; i < n; i++) {
@@ -945,7 +882,6 @@
       ctx.globalAlpha = 1;
     }
 
-    // candles
     for (i = 0; i < n; i++) {
       up = vis.c[i] >= vis.o[i];
       var col = up ? gain : loss;
@@ -957,7 +893,6 @@
       ctx.fillRect(x - cw / 2, top, cw, bh);
     }
 
-    // MA lines
     function line(arr, color, yFn) {
       ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
       var started = false;
@@ -970,7 +905,6 @@
     }
     line(ma5, ma5c, py); line(ma10, ma10c, py); line(ma20, ma20c, py);
 
-    // ---- MACD panel
     var mTop = padT + priceH + volH + gap;
     var mAbs = 0;
     for (i = 0; i < n; i++) {
@@ -989,7 +923,6 @@
     ctx.fillStyle = muted; ctx.textAlign = "left"; ctx.textBaseline = "top";
     ctx.fillText("MACD(12,26,9)", padL, mTop - 12);
 
-    // ---- RSI panel
     var rTop = mTop + macdH + gap;
     var ry = function (v) { return rTop + (100 - v) / 100 * rsiH; };
     ctx.strokeStyle = grid;
@@ -1003,7 +936,6 @@
     ctx.fillStyle = muted; ctx.textBaseline = "top";
     ctx.fillText("RSI(14)", padL, rTop - 12);
 
-    // crosshair
     if (hoverI >= 0 && hoverI < n) {
       var hx = xAt(hoverI);
       ctx.strokeStyle = muted; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
@@ -1016,7 +948,6 @@
       ma5: ma5, ma10: ma10, ma20: ma20, dif: dif, dea: dea, hist: hist, rsi: rsiS
     };
 
-    // legend
     var li = hoverI >= 0 && hoverI < n ? hoverI : n - 1;
     var fmtMA = function (v) { return v === null || v === undefined ? "--" : v.toFixed(2); };
     $("legend").innerHTML =
@@ -1025,7 +956,7 @@
       '<span><span class="sw" style="background:' + ma20c + '"></span>MA20 ' + fmtMA(ma20[li]) + "</span>" +
       "<span>DIF " + fmtMA(dif[li]) + "</span><span>DEA " + fmtMA(dea[li]) + "</span>" +
       "<span>RSI " + fmtMA(rsiS[li]) + "</span>";
-    $("chipBars").textContent = n + " 根日线";
+    $("chipBars").textContent = n + " 根日线 · 截至 " + (state.hist.asOf || "--");
   }
 
   canvas.addEventListener("mousemove", function (e) {
@@ -1092,29 +1023,22 @@
     var pnlPct = totalCost > 0 ? pnl / totalCost * 100 : 0;
 
     $("chipCost").textContent = cost.toLocaleString("en-US", { maximumFractionDigits: 2 });
+    $("hdrSymbol").textContent = (inputs.ticker.value || "SPCX").toUpperCase();
 
     $("heroPrice").textContent = price > 0 ? money(price, 2) : "--";
     var hd = $("heroDelta");
-    if (state.live && state.live.changePct !== null && state.live.changePct !== undefined) {
-      hd.textContent = pct(state.live.changePct, true) + " 今日";
-      hd.className = "delta " + pnlClass(state.live.changePct);
-    } else if (price > 0 && totalCost > 0) {
+    if (price > 0 && totalCost > 0) {
       hd.textContent = pct(pnlPct, true);
       hd.className = "delta " + pnlClass(pnl);
     } else { hd.textContent = ""; }
 
     var sub = [];
-    if (state.live) {
-      if (state.live.bid != null && state.live.ask != null)
-        sub.push("买一 " + state.live.bid.toFixed(2) + " / 卖一 " + state.live.ask.toFixed(2));
-      if (state.live.volume != null)
-        sub.push("成交量 " + (state.live.volume >= 1e6 ? (state.live.volume / 1e6).toFixed(1) + "M" : Math.round(state.live.volume / 1000) + "K"));
-      if (totalCost > 0) sub.push("持仓浮盈 " + pct(pnlPct, true));
+    if (state.hist && state.hist.c.length) {
+      var lastClose = state.hist.c[state.hist.c.length - 1];
+      sub.push("最近收盘 " + money(lastClose, 2) + "（" + (state.hist.asOf || "--") + "）");
+      if (price > 0 && lastClose > 0) sub.push("较收盘 " + pct((price / lastClose - 1) * 100, true));
     }
     $("heroSub").textContent = sub.join(" · ");
-    var chipLive = $("chipLive");
-    if (state.mode === "live") { chipLive.style.display = ""; chipLive.className = "chip live"; chipLive.textContent = "LIVE"; }
-    else chipLive.style.display = "none";
 
     $("kpiCost").textContent = money(totalCost);
     $("kpiValue").textContent = price > 0 ? money(value) : "--";
@@ -1125,7 +1049,6 @@
     kc.textContent = price > 0 ? pct(pnlPct, true) : "--";
     kc.className = "t-value " + pnlClass(pnl);
 
-    /* signals */
     var sig = computeSignals();
     $("sigSell").textContent = money(sig.sell, 2);
     $("sigSellRefs").innerHTML = sig.sellRefs.join("<br>");
@@ -1135,7 +1058,6 @@
       return '<span class="sig-chip ' + c.cls + '">' + c.text + "</span>";
     }).join("");
 
-    /* tranche sell table */
     var rows = SELL_FRACTIONS.map(function (t) {
       var nS = Math.floor(shares * t.f);
       if (nS < 1) return "";
@@ -1153,10 +1075,9 @@
   function renderTrades(totalCost, unrealized, price) {
     var rounds = computeRounds();
 
-    // per-buy round profit for display: recompute matching to attribute lots to buys
-    var lotByBuy = [], openQueue = [], li = 0;
+    var lotByBuy = [], li = 0;
     trades.forEach(function (t, idx) {
-      if (t.type === "sell") { openQueue.push({ price: t.price, remaining: t.shares }); lotByBuy[idx] = null; }
+      if (t.type === "sell") { lotByBuy[idx] = null; }
       else {
         var profit = 0, matched = 0;
         while (matched < t.shares && li < rounds.lots.length) {
@@ -1212,7 +1133,6 @@
       st.className = "t-value " + pnlClass(tot);
     } else { st.textContent = "--"; st.className = "t-value"; }
 
-    /* risk metrics */
     var dd = $("riskDd");
     if (state.hist && state.hist.c.length >= 2) {
       var vis = visibleHist();
@@ -1222,7 +1142,7 @@
       var f = new Date(vis.t[r.from]), tD = new Date(vis.t[r.to]);
       $("riskDdSub").textContent = (f.getMonth() + 1) + "/" + f.getDate() + " → " + (tD.getMonth() + 1) + "/" + tD.getDate() +
         " · " + vis.c.length + " 根日线";
-    } else { dd.textContent = "--"; dd.className = "t-value"; $("riskDdSub").textContent = "需要行情历史数据"; }
+    } else { dd.textContent = "--"; dd.className = "t-value"; $("riskDdSub").textContent = "需要历史数据"; }
 
     var lots = rounds.lots;
     var wins = lots.filter(function (l) { return l.profit > 0; });
@@ -1241,26 +1161,12 @@
       $("riskWin").textContent = "--"; $("riskWinSub").textContent = "完成一轮卖出+买回后显示";
       $("riskPl").textContent = "--"; $("riskAvg").textContent = "--"; $("riskAvg").className = "t-value";
     }
-
-    $("statCountHidden") && ($("statCountHidden").textContent = trades.length);
   }
 
   /* ================= events ================= */
 
-  ["price", "cost", "shares", "fee", "wave", "pull"].forEach(function (k) {
+  ["ticker", "price", "cost", "shares", "fee", "wave", "pull"].forEach(function (k) {
     inputs[k].addEventListener("input", function () { saveState(); render(); });
-  });
-
-  inputs.ticker.addEventListener("change", function () {
-    var q = inputs.ticker.value.trim().toUpperCase();
-    inputs.ticker.value = q;
-    saveState();
-    if (!q) return;
-    if (state.mode === "live" || state.mode === "detecting") {
-      if (window.claude && window.claude.mcp) resolveTicker(q);
-    } else {
-      $("hdrSymbol").textContent = q;
-    }
   });
 
   $("segSell").addEventListener("click", function () { setLogType("sell"); });
@@ -1281,7 +1187,7 @@
     if ((!isFinite(price) || price <= 0) && currentPrice() > 0) price = currentPrice();
     var shares = Math.floor(parseFloat($("logShares").value));
     if (!isFinite(price) || price <= 0 || !isFinite(shares) || shares < 1) {
-      alert("请输入有效的价格和股数（价格留空时使用当前实时价）");
+      alert("请输入有效的价格和股数（价格留空时使用当前股价）");
       return;
     }
     if (state.logType === "sell" && shares > Math.floor(num(inputs.shares))) {
@@ -1313,9 +1219,9 @@
 
   /* ================= boot ================= */
 
+  loadHist();
   setLogType("sell");
   render();
-  initLive();
 
   // test hook (harmless in production)
   window.__panel = {
