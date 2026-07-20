@@ -15,12 +15,17 @@
     --hairline:       #e1e0d9;
     --border:         rgba(11, 11, 11, 0.10);
     --gain:           #006300;
+    --gain-mark:      #0ca30c;
     --gain-wash:      rgba(12, 163, 12, 0.10);
     --loss:           #d03b3b;
     --loss-wash:      rgba(208, 59, 59, 0.10);
     --risk-high:      #ec835a;
     --accent:         #2a78d6;
     --accent-wash:    rgba(42, 120, 214, 0.10);
+    --ma5:            #2a78d6;
+    --ma10:           #eda100;
+    --ma20:           #4a3aa7;
+    --grid:           #e1e0d9;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -33,8 +38,13 @@
       --hairline:       #2c2c2a;
       --border:         rgba(255, 255, 255, 0.10);
       --gain:           #0ca30c;
+      --gain-mark:      #0ca30c;
       --loss:           #d03b3b;
       --accent:         #3987e5;
+      --ma5:            #3987e5;
+      --ma10:           #c98500;
+      --ma20:           #9085e9;
+      --grid:           #2c2c2a;
     }
   }
   :root[data-theme="dark"] {
@@ -47,8 +57,13 @@
     --hairline:       #2c2c2a;
     --border:         rgba(255, 255, 255, 0.10);
     --gain:           #0ca30c;
+    --gain-mark:      #0ca30c;
     --loss:           #d03b3b;
     --accent:         #3987e5;
+    --ma5:            #3987e5;
+    --ma10:           #c98500;
+    --ma20:           #9085e9;
+    --grid:           #2c2c2a;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -61,7 +76,7 @@
     padding: 24px 16px 48px;
   }
 
-  .panel { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  .panel { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
   /* ---------- header ---------- */
   header h1 { font-size: 22px; font-weight: 700; }
@@ -76,6 +91,11 @@
     display: inline-flex; align-items: center; gap: 5px;
   }
   .chip.risk::before { content: "▲"; font-size: 10px; }
+  .chip.live { color: var(--gain); border-color: var(--gain); font-weight: 600; }
+  .chip.live::before { content: "●"; margin-right: 5px; animation: pulse 2s infinite; }
+  .chip.manual-mode { color: var(--text-muted); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @media (prefers-reduced-motion: reduce) { .chip.live::before { animation: none; } }
 
   /* ---------- cards ---------- */
   .card {
@@ -86,29 +106,69 @@
   .card h2 .note { font-size: 12px; font-weight: 400; color: var(--text-muted); margin-left: 6px; }
 
   /* ---------- hero price ---------- */
-  .hero .label { font-size: 13px; color: var(--text-secondary); }
+  .hero .label { font-size: 13px; color: var(--text-secondary); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .hero .value { font-size: 48px; font-weight: 700; letter-spacing: -0.5px; }
   .hero .delta { font-size: 18px; font-weight: 600; margin-left: 10px; }
+  .hero .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .status-line { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+  .status-line.err { color: var(--risk-high); }
 
   /* ---------- inputs ---------- */
-  .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
   .field label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
-  .field input {
+  .field input, .field select {
     width: 100%; padding: 8px 10px; font-size: 15px;
     font-variant-numeric: tabular-nums;
     background: var(--page); color: var(--text-primary);
     border: 1px solid var(--hairline); border-radius: 8px;
   }
   .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+  .field input:disabled { opacity: 0.55; }
 
   /* ---------- KPI tiles ---------- */
   .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
   .tile { border: 1px solid var(--hairline); border-radius: 10px; padding: 12px 14px; }
   .tile .t-label { font-size: 12px; color: var(--text-secondary); }
   .tile .t-value { font-size: 22px; font-weight: 700; margin-top: 2px; }
+  .tile .t-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
   .pos { color: var(--gain); }
   .neg { color: var(--loss); }
+
+  /* ---------- chart ---------- */
+  .range-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  .range-btn {
+    font-size: 12px; padding: 4px 12px; border-radius: 999px;
+    border: 1px solid var(--hairline); background: none; color: var(--text-secondary); cursor: pointer;
+  }
+  .range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+  .legend .sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  .chart-wrap { position: relative; }
+  #chart { width: 100%; display: block; cursor: crosshair; }
+  #chartTip {
+    position: absolute; pointer-events: none; display: none;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; line-height: 1.6; z-index: 5;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15); font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .chart-empty { color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px 10px; }
+
+  /* ---------- signal cards ---------- */
+  .signal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .signal {
+    border: 1px solid var(--hairline); border-radius: 10px; padding: 14px 16px;
+  }
+  .signal .s-title { font-size: 13px; color: var(--text-secondary); }
+  .signal .s-price { font-size: 28px; font-weight: 700; margin: 4px 0; }
+  .signal.sell .s-price { color: var(--gain); }
+  .signal.buy .s-price { color: var(--accent); }
+  .signal .s-refs { font-size: 12px; color: var(--text-muted); line-height: 1.7; font-variant-numeric: tabular-nums; }
+  .sig-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .sig-chip { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--hairline); color: var(--text-secondary); }
+  .sig-chip.hot { color: var(--risk-high); border-color: var(--risk-high); font-weight: 600; }
+  .sig-chip.cold { color: var(--accent); border-color: var(--accent); font-weight: 600; }
 
   /* ---------- tables ---------- */
   .tbl-wrap { overflow-x: auto; }
@@ -123,28 +183,27 @@
     font-variant-numeric: tabular-nums; white-space: nowrap;
   }
   tr:last-child td { border-bottom: none; }
-  .empty-state {
-    text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px 10px;
-  }
+  .empty-state { text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px 10px; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+  .badge.sell { background: var(--gain-wash); color: var(--gain); }
+  .badge.buy { background: var(--accent-wash); color: var(--accent); }
+  .badge.open { background: var(--loss-wash); color: var(--risk-high); }
 
   /* ---------- trade log form ---------- */
   .log-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
-  .log-form .field { flex: 1 1 120px; }
-  button {
-    font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px;
-    border: 1px solid var(--border); cursor: pointer;
-  }
+  .log-form .field { flex: 1 1 110px; }
+  .seg { display: inline-flex; border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden; }
+  .seg button { border: none; background: none; padding: 8px 16px; font-size: 14px; color: var(--text-secondary); cursor: pointer; }
+  .seg button.active.sell { background: var(--gain); color: #fff; font-weight: 600; }
+  .seg button.active.buy { background: var(--accent); color: #fff; font-weight: 600; }
+  button { font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
   .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   .btn-primary:hover { filter: brightness(1.08); }
   .btn-ghost { background: none; color: var(--text-secondary); }
   .btn-ghost:hover { background: var(--accent-wash); }
-  .btn-del {
-    background: none; border: none; color: var(--text-muted);
-    font-size: 13px; padding: 2px 6px;
-  }
+  .btn-del { background: none; border: none; color: var(--text-muted); font-size: 13px; padding: 2px 6px; }
   .btn-del:hover { color: var(--loss); }
 
-  /* ---------- footer ---------- */
   footer { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
 </style>
 </head>
@@ -152,26 +211,51 @@
 <div class="panel">
 
   <header>
-    <h1>SPCX 波段交易面板</h1>
+    <h1><span id="hdrSymbol">SPCX</span> 波段交易面板</h1>
     <div class="subtitle">Cutting Salami · 切香肠复利策略</div>
     <div class="chip-row">
-      <span class="chip">手动定价 · 本地会话</span>
+      <span class="chip" id="chipMode">手动定价 · 本地会话</span>
       <span class="chip risk">HIGH</span>
       <span class="chip">建仓 $<span id="chipCost">145</span></span>
+      <span class="chip" id="chipName" style="display:none"></span>
     </div>
   </header>
 
   <section class="card hero">
-    <div class="label">当前股价</div>
+    <div class="label">当前股价 <span class="chip manual-mode" id="chipLive" style="display:none"></span></div>
     <div>
-      <span class="value" id="heroPrice">$168.50</span>
-      <span class="delta" id="heroDelta">+16.2%</span>
+      <span class="value" id="heroPrice">--</span>
+      <span class="delta" id="heroDelta"></span>
+    </div>
+    <div class="sub" id="heroSub"></div>
+    <div class="status-line" id="statusLine">正在检测数据源…</div>
+  </section>
+
+  <section class="card">
+    <h2>📊 K 线图<span class="note">日线 · MA / MACD / RSI</span></h2>
+    <div class="range-row" id="rangeRow">
+      <button class="range-btn" data-n="22">1月</button>
+      <button class="range-btn" data-n="66">3月</button>
+      <button class="range-btn" data-n="132">6月</button>
+      <button class="range-btn active" data-n="0">全部</button>
+      <span style="flex:1"></span>
+      <span class="chip manual-mode" id="chipBars"></span>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="chart-wrap" id="chartWrap">
+      <canvas id="chart"></canvas>
+      <div id="chartTip"></div>
+      <div class="chart-empty" id="chartEmpty" style="display:none"></div>
     </div>
   </section>
 
   <section class="card">
-    <h2>手动输入价格</h2>
+    <h2>参数设置</h2>
     <div class="input-grid">
+      <div class="field">
+        <label for="inTicker">标的代码</label>
+        <input type="text" id="inTicker" value="SPCX" autocapitalize="characters" autocomplete="off">
+      </div>
       <div class="field">
         <label for="inPrice">当前股价 ($)</label>
         <input type="number" id="inPrice" step="0.01" min="0" value="168.50">
@@ -188,6 +272,14 @@
         <label for="inFee">单笔交易费 ($)</label>
         <input type="number" id="inFee" step="0.01" min="0" value="2">
       </div>
+      <div class="field">
+        <label for="inWave">波段目标 (%)</label>
+        <input type="number" id="inWave" step="0.5" min="0.5" value="8">
+      </div>
+      <div class="field">
+        <label for="inPull">回补回撤 (%)</label>
+        <input type="number" id="inPull" step="0.5" min="0.5" value="5">
+      </div>
     </div>
   </section>
 
@@ -196,21 +288,38 @@
     <div class="kpi-row">
       <div class="tile">
         <div class="t-label">总成本</div>
-        <div class="t-value" id="kpiCost">$6,960</div>
+        <div class="t-value" id="kpiCost">--</div>
       </div>
       <div class="tile">
         <div class="t-label">当前市值</div>
-        <div class="t-value" id="kpiValue">$8,088</div>
+        <div class="t-value" id="kpiValue">--</div>
       </div>
       <div class="tile">
-        <div class="t-label">浮动盈亏</div>
-        <div class="t-value" id="kpiPnl">+$1,128</div>
+        <div class="t-label">未实现盈亏</div>
+        <div class="t-value" id="kpiPnl">--</div>
       </div>
       <div class="tile">
         <div class="t-label">浮盈比例</div>
-        <div class="t-value" id="kpiPct">+16.2%</div>
+        <div class="t-value" id="kpiPct">--</div>
       </div>
     </div>
+  </section>
+
+  <section class="card">
+    <h2>🎯 下一步建议<span class="note">按波段目标与技术指标自动计算</span></h2>
+    <div class="signal-grid">
+      <div class="signal sell">
+        <div class="s-title">建议卖点</div>
+        <div class="s-price" id="sigSell">--</div>
+        <div class="s-refs" id="sigSellRefs"></div>
+      </div>
+      <div class="signal buy">
+        <div class="s-title">建议买回点</div>
+        <div class="s-price" id="sigBuy">--</div>
+        <div class="s-refs" id="sigBuyRefs"></div>
+      </div>
+    </div>
+    <div class="sig-chips" id="sigChips"></div>
   </section>
 
   <section class="card">
@@ -226,58 +335,91 @@
   </section>
 
   <section class="card">
-    <h2>卖出后建议回补价位<span class="note">以半仓卖出所得计算回补</span></h2>
-    <div class="tbl-wrap">
-      <table>
-        <thead>
-          <tr><th>回撤幅度</th><th>回补价</th><th>较建仓价</th><th>可回补股数</th><th>净增股数</th></tr>
-        </thead>
-        <tbody id="tblRebuy"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>波段交易记录</h2>
+    <h2>🔁 波段交易记录<span class="note">卖出与买回自动配对成回合，并同步持仓</span></h2>
     <div class="log-form">
-      <div class="field">
-        <label for="logPrice">卖出价 ($)</label>
-        <input type="number" id="logPrice" step="0.01" min="0" placeholder="168.50">
+      <div class="field" style="flex:0 0 auto">
+        <label>方向</label>
+        <span class="seg">
+          <button id="segSell" class="active sell">卖出</button>
+          <button id="segBuy" class="buy">买回</button>
+        </span>
       </div>
       <div class="field">
-        <label for="logShares">卖出股数</label>
+        <label for="logPrice">价格 ($)</label>
+        <input type="number" id="logPrice" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div class="field">
+        <label for="logShares">股数</label>
         <input type="number" id="logShares" step="1" min="1" placeholder="24">
       </div>
-      <button class="btn-primary" id="btnLog">＋ 记录本次卖出</button>
+      <button class="btn-primary" id="btnLog">＋ 记录</button>
       <button class="btn-ghost" id="btnClear">清空记录</button>
     </div>
     <div class="tbl-wrap">
       <table>
         <thead>
-          <tr><th>日期</th><th>卖出价</th><th>股数</th><th>净利润</th><th></th></tr>
+          <tr><th>日期</th><th>方向</th><th>价格</th><th>股数</th><th>盈亏</th><th>状态</th><th></th></tr>
         </thead>
         <tbody id="tblLog"></tbody>
       </table>
-      <div class="empty-state" id="logEmpty">暂无记录 — 卖出后点击"记录本次卖出"开始追踪</div>
+      <div class="empty-state" id="logEmpty">暂无记录 — 卖出后点击"记录"开始追踪，买回时自动配对成一轮波段</div>
     </div>
-    <div class="kpi-row" style="margin-top:14px">
+  </section>
+
+  <section class="card">
+    <h2>💰 收益统计</h2>
+    <div class="kpi-row">
       <div class="tile">
         <div class="t-label">累计已实现利润</div>
         <div class="t-value" id="statProfit">$0</div>
+        <div class="t-sub">相对建仓成本，已扣手续费</div>
       </div>
       <div class="tile">
-        <div class="t-label">累计交易次数</div>
-        <div class="t-value" id="statCount">0</div>
+        <div class="t-label">未实现盈亏</div>
+        <div class="t-value" id="statUnreal">--</div>
+        <div class="t-sub">当前持仓浮动</div>
       </div>
       <div class="tile">
-        <div class="t-label">累计复利收益率</div>
+        <div class="t-label">复利收益率</div>
         <div class="t-value" id="statReturn">0.0%</div>
+        <div class="t-sub" id="statBase">已实现 ÷ 初始本金</div>
+      </div>
+      <div class="tile">
+        <div class="t-label">总收益率</div>
+        <div class="t-value" id="statTotal">--</div>
+        <div class="t-sub">已实现 + 未实现</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>📉 风险指标</h2>
+    <div class="kpi-row">
+      <div class="tile">
+        <div class="t-label">标的最大回撤</div>
+        <div class="t-value" id="riskDd">--</div>
+        <div class="t-sub" id="riskDdSub">按当前图表区间收盘价</div>
+      </div>
+      <div class="tile">
+        <div class="t-label">胜率</div>
+        <div class="t-value" id="riskWin">--</div>
+        <div class="t-sub" id="riskWinSub">已完成回合</div>
+      </div>
+      <div class="tile">
+        <div class="t-label">盈亏比</div>
+        <div class="t-value" id="riskPl">--</div>
+        <div class="t-sub">平均盈利 ÷ 平均亏损</div>
+      </div>
+      <div class="tile">
+        <div class="t-label">平均每轮收益</div>
+        <div class="t-value" id="riskAvg">--</div>
+        <div class="t-sub">已完成回合均值</div>
       </div>
     </div>
   </section>
 
   <footer>
-    价格与持仓需手动更新，本面板不连接实时行情。交易记录保存在本次会话的本地存储中，仅你可见。<br>
+    实时行情来自你在 claude.ai 连接的 Interactive Brokers 连接器；未连接时可手动输入价格。记录卖出/买回会自动同步持仓股数与建仓均价（删除记录不回滚持仓）。所有数据保存在浏览器本地存储中，仅你可见。<br>
     不构成投资建议，波段操作请自行评估风险。
   </footer>
 
@@ -287,67 +429,649 @@
 (function () {
   "use strict";
 
-  var STATE_KEY  = "spcx-panel-state";
-  var TRADES_KEY = "spcx-panel-trades";
+  var STATE_KEY  = "spcx-panel-state-v2";
+  var TRADES_KEY = "spcx-panel-trades-v2";
+  var LEGACY_STATE_KEY  = "spcx-panel-state";
+  var LEGACY_TRADES_KEY = "spcx-panel-trades";
+
+  var MCP_SERVER = "Interactive_Brokers_IBKR";
+  var DEFAULT_CONTRACT = { id: 890493863, symbol: "SPCX", name: "SPACE EXPLORATION TECHN-CL A" };
 
   var $ = function (id) { return document.getElementById(id); };
-  var inputs = { price: $("inPrice"), cost: $("inCost"), shares: $("inShares"), fee: $("inFee") };
+  var inputs = {
+    ticker: $("inTicker"), price: $("inPrice"), cost: $("inCost"),
+    shares: $("inShares"), fee: $("inFee"), wave: $("inWave"), pull: $("inPull")
+  };
+
+  /* ================= helpers ================= */
 
   function num(el) {
     var v = parseFloat(el.value);
     return isFinite(v) && v >= 0 ? v : 0;
   }
-
-  function money(v, decimals) {
-    var d = decimals === undefined ? 0 : decimals;
+  function money(v, d) {
+    d = d === undefined ? 0 : d;
     var sign = v < 0 ? "-" : "";
-    return sign + "$" + Math.abs(v).toLocaleString("en-US", {
-      minimumFractionDigits: d, maximumFractionDigits: d
-    });
+    return sign + "$" + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
   }
-
-  function signedMoney(v) {
-    return (v >= 0 ? "+" : "-") + money(Math.abs(v));
-  }
-
-  function pct(v, signed) {
-    var s = signed && v >= 0 ? "+" : "";
-    return s + v.toFixed(1) + "%";
-  }
-
+  function signedMoney(v, d) { return (v >= 0 ? "+" : "-") + money(Math.abs(v), d); }
+  function pct(v, signed) { return (signed && v >= 0 ? "+" : "") + v.toFixed(1) + "%"; }
   function pnlClass(v) { return v >= 0 ? "pos" : "neg"; }
-
-  /* ---------- persistence ---------- */
+  function fmtDate(ts) {
+    var d = new Date(ts);
+    return (d.getMonth() + 1) + "/" + d.getDate() + " " +
+      String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+  function fmtTime(ts) {
+    var d = new Date(ts);
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") +
+      ":" + String(d.getSeconds()).padStart(2, "0");
+  }
 
   function loadJSON(key, fallback) {
-    try {
-      var raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (e) { return fallback; }
+    try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch (e) { return fallback; }
   }
 
+  /* ================= state ================= */
+
+  var state = {
+    contract: null,           // {id, symbol, name}
+    live: null,               // {price, changePct, change, bid, ask, volume, ts}
+    hist: null,               // {t:[], o:[], h:[], l:[], c:[], v:[]}
+    rangeN: 0,                // visible bars (0 = all)
+    logType: "sell",
+    baseline: null,           // initial capital for compound return
+    mode: "detecting"         // detecting | live | manual | error
+  };
+
+  var trades = loadJSON(TRADES_KEY, null);
+  if (trades === null) {
+    // migrate v1 records (sell-only, {date,price,shares,net})
+    var legacy = loadJSON(LEGACY_TRADES_KEY, []);
+    trades = legacy.map(function (t) {
+      return { type: "sell", ts: null, legacyDate: t.date, price: t.price, shares: t.shares, fee: 0, net: t.net };
+    });
+  }
+  function saveTrades() { localStorage.setItem(TRADES_KEY, JSON.stringify(trades)); }
+
+  var saved = loadJSON(STATE_KEY, null) || loadJSON(LEGACY_STATE_KEY, null);
+  if (saved) {
+    if (saved.ticker) inputs.ticker.value = saved.ticker;
+    if (saved.price  !== undefined) inputs.price.value  = saved.price;
+    if (saved.cost   !== undefined) inputs.cost.value   = saved.cost;
+    if (saved.shares !== undefined) inputs.shares.value = saved.shares;
+    if (saved.fee    !== undefined) inputs.fee.value    = saved.fee;
+    if (saved.wave) inputs.wave.value = saved.wave;
+    if (saved.pull) inputs.pull.value = saved.pull;
+    if (saved.baseline) state.baseline = saved.baseline;
+    if (saved.contract) state.contract = saved.contract;
+  }
   function saveState() {
     localStorage.setItem(STATE_KEY, JSON.stringify({
-      price: inputs.price.value, cost: inputs.cost.value,
-      shares: inputs.shares.value, fee: inputs.fee.value
+      ticker: inputs.ticker.value, price: inputs.price.value, cost: inputs.cost.value,
+      shares: inputs.shares.value, fee: inputs.fee.value,
+      wave: inputs.wave.value, pull: inputs.pull.value,
+      baseline: state.baseline, contract: state.contract
     }));
   }
 
-  var trades = loadJSON(TRADES_KEY, []);
-
-  function saveTrades() {
-    localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
+  function currentPrice() {
+    return state.live ? state.live.price : num(inputs.price);
   }
 
-  var saved = loadJSON(STATE_KEY, null);
-  if (saved) {
-    inputs.price.value  = saved.price;
-    inputs.cost.value   = saved.cost;
-    inputs.shares.value = saved.shares;
-    inputs.fee.value    = saved.fee;
+  /* ================= indicators ================= */
+
+  function sma(arr, n) {
+    var out = new Array(arr.length).fill(null), sum = 0;
+    for (var i = 0; i < arr.length; i++) {
+      sum += arr[i];
+      if (i >= n) sum -= arr[i - n];
+      if (i >= n - 1) out[i] = sum / n;
+    }
+    return out;
   }
 
-  /* ---------- render ---------- */
+  function ema(arr, n) {
+    var out = new Array(arr.length).fill(null);
+    if (!arr.length) return out;
+    var k = 2 / (n + 1), prev = arr[0];
+    out[0] = prev;
+    for (var i = 1; i < arr.length; i++) {
+      prev = arr[i] * k + prev * (1 - k);
+      out[i] = prev;
+    }
+    return out;
+  }
+
+  function macd(closes) {
+    var e12 = ema(closes, 12), e26 = ema(closes, 26);
+    var dif = closes.map(function (_, i) { return e12[i] - e26[i]; });
+    var dea = ema(dif, 9);
+    var hist = dif.map(function (d, i) { return d - dea[i]; });
+    return { dif: dif, dea: dea, hist: hist };
+  }
+
+  function rsi(closes, n) {
+    n = n || 14;
+    var out = new Array(closes.length).fill(null);
+    if (closes.length <= n) return out;
+    var gain = 0, loss = 0, i, ch;
+    for (i = 1; i <= n; i++) {
+      ch = closes[i] - closes[i - 1];
+      if (ch >= 0) gain += ch; else loss -= ch;
+    }
+    var avgG = gain / n, avgL = loss / n;
+    out[n] = avgL === 0 ? 100 : 100 - 100 / (1 + avgG / avgL);
+    for (i = n + 1; i < closes.length; i++) {
+      ch = closes[i] - closes[i - 1];
+      avgG = (avgG * (n - 1) + Math.max(ch, 0)) / n;
+      avgL = (avgL * (n - 1) + Math.max(-ch, 0)) / n;
+      out[i] = avgL === 0 ? 100 : 100 - 100 / (1 + avgG / avgL);
+    }
+    return out;
+  }
+
+  function maxDrawdown(closes) {
+    var peak = -Infinity, mdd = 0, peakI = 0, from = 0, to = 0;
+    for (var i = 0; i < closes.length; i++) {
+      if (closes[i] > peak) { peak = closes[i]; peakI = i; }
+      var dd = peak > 0 ? (peak - closes[i]) / peak : 0;
+      if (dd > mdd) { mdd = dd; from = peakI; to = i; }
+    }
+    return { pct: mdd * 100, from: from, to: to };
+  }
+
+  /* ================= MCP live data ================= */
+
+  var unsubs = [];
+  function clearWatches() { unsubs.forEach(function (u) { try { u(); } catch (e) {} }); unsubs = []; }
+
+  function setStatus(text, isErr) {
+    var el = $("statusLine");
+    el.textContent = text;
+    el.className = "status-line" + (isErr ? " err" : "");
+  }
+
+  function mcpErrorText(err) {
+    switch (err && err.code) {
+      case "needs_reauth":
+        return "IBKR 连接已过期 — 请在 claude.ai 设置 → 连接器 中重新连接 Interactive Brokers";
+      case "server_not_connected":
+        return "未找到 IBKR 连接器 — 请在 claude.ai 设置 → 连接器 中添加 Interactive Brokers";
+      case "selection_required":
+        return "存在多个同名 IBKR 连接器 — 请在弹出的提示中选择一个";
+      case "not_in_manifest": case "blocked_by_policy":
+        return "IBKR 连接器访问受限（组织策略或授权范围）";
+      case "approval_required":
+        return "组织策略要求逐次批准该工具调用，页面内暂不支持";
+      case "tool_error":
+        return "IBKR 返回错误：" + (err.message || "未知错误");
+      default:
+        return "行情获取失败（" + ((err && err.code) || "unknown") + "），保留最近数据";
+    }
+  }
+  function isAuthzErr(err) {
+    return err && (err.code === "needs_reauth" || err.code === "server_not_connected" ||
+      err.code === "blocked_by_policy" || err.code === "approval_required");
+  }
+
+  function enterManualMode(reason) {
+    state.mode = "manual";
+    inputs.price.disabled = false;
+    $("chipMode").textContent = "手动定价 · 本地会话";
+    $("chipLive").style.display = "none";
+    $("chartEmpty").style.display = "";
+    $("chartEmpty").textContent = "K 线图需要实时行情 — 在 claude.ai 中打开本面板并连接 Interactive Brokers 连接器后自动加载";
+    $("chart").style.display = "none";
+    setStatus(reason || "手动模式：请自行维护当前股价", false);
+    render();
+  }
+
+  function enterLiveMode() {
+    state.mode = "live";
+    inputs.price.disabled = true;
+    $("chipMode").textContent = "实时行情 · IBKR";
+    $("chart").style.display = "";
+    $("chartEmpty").style.display = "none";
+  }
+
+  function startWatches(contract) {
+    clearWatches();
+    var mcp = window.claude.mcp;
+
+    unsubs.push(mcp.watchTool(MCP_SERVER, "get_price_snapshot", {
+      contract_id: contract.id,
+      market_data_names: ["last", "bid_ask", "change", "volume"]
+    }, function (ev) {
+      if (ev.type === "data") {
+        var p = ev.data ? ev.data : ev.result;
+        onSnapshot(p && p.payload !== undefined ? p.payload : p, p && p.cache);
+      } else {
+        if (isAuthzErr(ev.error)) { state.live = null; enterManualMode(mcpErrorText(ev.error)); }
+        else setStatus(mcpErrorText(ev.error), true);
+      }
+    }, { refetchInterval: 30000 }));
+
+    unsubs.push(mcp.watchTool(MCP_SERVER, "get_price_history", {
+      contract_id: contract.id,
+      security_type: "STK",
+      step: "ONE_DAY",
+      outside_rth: false,
+      period: "ONE_YEAR"
+    }, function (ev) {
+      if (ev.type === "data") {
+        var p = ev.data ? ev.data : ev.result;
+        onHistory(p && p.payload !== undefined ? p.payload : p);
+      } else {
+        if (isAuthzErr(ev.error)) { state.hist = null; enterManualMode(mcpErrorText(ev.error)); }
+        else setStatus(mcpErrorText(ev.error), true);
+      }
+    }, { refetchInterval: 300000 }));
+  }
+
+  function onSnapshot(payload, cache) {
+    if (!payload || !payload.last || payload.last.price == null) return;
+    enterLiveMode();
+    var ba = payload["bid-ask"] || {};
+    state.live = {
+      price: payload.last.price,
+      ts: (payload.last.ts ? payload.last.ts * 1000 : (cache && cache.storedAt) || Date.now()),
+      halted: !!payload.last.halted,
+      change: payload.change ? payload.change.change : null,
+      changePct: payload.change ? payload.change.change_pct : null,
+      bid: ba.bid, ask: ba.ask,
+      volume: payload.volume ? payload.volume.volume : null
+    };
+    inputs.price.value = state.live.price.toFixed(2);
+    saveState();
+    var src = cache ? "缓存 " + fmtTime(cache.storedAt) : "更新 " + fmtTime(state.live.ts);
+    setStatus("实时行情 · " + src + (state.live.halted ? " · 已停牌" : ""), false);
+    render();
+  }
+
+  function onHistory(payload) {
+    if (!payload || !payload.time || !payload.time.length) return;
+    state.hist = {
+      t: payload.time.map(function (s) { return new Date(s).getTime(); }),
+      o: payload.open, h: payload.high, l: payload.low, c: payload.close, v: payload.volume
+    };
+    render();
+  }
+
+  function resolveTicker(query) {
+    var mcp = window.claude.mcp;
+    setStatus("正在搜索 " + query + " …", false);
+    mcp.callTool(MCP_SERVER, "search_contracts", { query: query })
+      .then(function (res) {
+        var rows = (res.payload && res.payload.results) || [];
+        var q = query.toUpperCase();
+        var stk = rows.filter(function (r) {
+          return r.symbol === q && r.underlying_contract_id &&
+            (r.sections || []).some(function (s) { return s.security_type === "STK"; });
+        });
+        var pick = stk.find(function (r) { return r.country_code === "US"; }) || stk[0];
+        if (!pick) { setStatus("未找到代码为 " + q + " 的股票", true); return; }
+        state.contract = { id: pick.underlying_contract_id, symbol: pick.symbol, name: pick.description || "" };
+        state.live = null; state.hist = null;
+        $("hdrSymbol").textContent = pick.symbol;
+        $("chipName").textContent = state.contract.name;
+        $("chipName").style.display = "";
+        saveState();
+        startWatches(state.contract);
+        render();
+      })
+      .catch(function (err) {
+        if (isAuthzErr(err)) enterManualMode(mcpErrorText(err));
+        else setStatus(mcpErrorText(err), true);
+      });
+  }
+
+  function initLive() {
+    if (!window.claude || window.claude.mcp === undefined) {
+      enterManualMode("手动模式：未检测到 claude.ai 运行环境，行情需手动输入");
+      return;
+    }
+    if (!state.contract) state.contract = DEFAULT_CONTRACT;
+    $("hdrSymbol").textContent = state.contract.symbol;
+    if (state.contract.name) { $("chipName").textContent = state.contract.name; $("chipName").style.display = ""; }
+    setStatus("正在连接 Interactive Brokers …", false);
+    startWatches(state.contract);
+  }
+
+  /* ================= trades & rounds ================= */
+
+  // FIFO-match sells to later buys → closed lots
+  function computeRounds() {
+    var open = [];   // sell legs: {price, shares, remaining, feePerShare}
+    var lots = [];   // {qty, sellPrice, buyPrice, profit}
+    trades.forEach(function (t) {
+      var fps = t.shares > 0 ? (t.fee || 0) / t.shares : 0;
+      if (t.type === "sell") {
+        open.push({ price: t.price, remaining: t.shares, fps: fps });
+      } else {
+        var need = t.shares;
+        while (need > 0 && open.length) {
+          var leg = open[0];
+          var qty = Math.min(need, leg.remaining);
+          lots.push({
+            qty: qty, sellPrice: leg.price, buyPrice: t.price,
+            profit: (leg.price - t.price) * qty - leg.fps * qty - fps * qty
+          });
+          leg.remaining -= qty; need -= qty;
+          if (leg.remaining <= 0) open.shift();
+        }
+      }
+    });
+    return { lots: lots, openShares: open.reduce(function (s, l) { return s + l.remaining; }, 0),
+             lastOpenSell: open.length ? open[open.length - 1].price : null };
+  }
+
+  function realizedProfit() {
+    return trades.reduce(function (s, t) { return t.type === "sell" ? s + (t.net || 0) : s; }, 0);
+  }
+
+  function recordTrade(type, price, shares) {
+    var cost = num(inputs.cost), fee = num(inputs.fee);
+    var curShares = Math.floor(num(inputs.shares));
+
+    if (state.baseline === null) {
+      state.baseline = cost * curShares || null;
+    }
+
+    var rec = { type: type, ts: Date.now(), price: price, shares: shares, fee: fee };
+    if (type === "sell") {
+      rec.net = (price - cost) * shares - fee;
+      inputs.shares.value = Math.max(0, curShares - shares);
+    } else {
+      var newShares = curShares + shares;
+      var newCost = newShares > 0 ? (cost * curShares + price * shares + fee) / newShares : cost;
+      inputs.cost.value = newCost.toFixed(4).replace(/\.?0+$/, "");
+      inputs.shares.value = newShares;
+    }
+    trades.push(rec);
+    saveTrades(); saveState();
+  }
+
+  /* ================= strategy suggestions ================= */
+
+  function computeSignals() {
+    var price = currentPrice();
+    var cost = num(inputs.cost);
+    var wave = num(inputs.wave) || 8;
+    var pull = num(inputs.pull) || 5;
+    var rounds = computeRounds();
+    var out = { chips: [] };
+
+    var closes = state.hist ? state.hist.c : null;
+    var last = closes ? closes.length - 1 : -1;
+    var lookback = 20;
+    var hi20 = null, lo20 = null, ma20v = null, rsiV = null;
+    if (closes && closes.length >= 2) {
+      var from = Math.max(0, closes.length - lookback);
+      hi20 = Math.max.apply(null, state.hist.h.slice(from));
+      lo20 = Math.min.apply(null, state.hist.l.slice(from));
+      var ma20arr = sma(closes, 20);
+      ma20v = ma20arr[last];
+      var rsiArr = rsi(closes, 14);
+      rsiV = rsiArr[last];
+    }
+
+    out.sell = cost * (1 + wave / 100);
+    out.sellRefs = [
+      "建仓价 " + money(cost, 2) + " × (1 + " + wave + "%)",
+      price > 0 ? "距当前价 " + pct((out.sell / price - 1) * 100, true) : "",
+      hi20 !== null ? "近20日高点 " + money(hi20, 2) : ""
+    ].filter(Boolean);
+
+    var buyBase = rounds.lastOpenSell !== null ? rounds.lastOpenSell : price;
+    out.buy = buyBase * (1 - pull / 100);
+    out.buyRefs = [
+      (rounds.lastOpenSell !== null ? "最近卖出价 " : "当前价 ") + money(buyBase, 2) + " × (1 − " + pull + "%)",
+      rounds.openShares > 0 ? "待回补 " + rounds.openShares + " 股" : "当前无未回补卖出",
+      lo20 !== null ? "近20日低点 " + money(lo20, 2) : ""
+    ].filter(Boolean);
+
+    if (rsiV !== null && rsiV !== undefined) {
+      var cls = rsiV >= 70 ? "hot" : rsiV <= 30 ? "cold" : "";
+      var tag = rsiV >= 70 ? "超买" : rsiV <= 30 ? "超卖" : "中性";
+      out.chips.push({ text: "RSI(14) " + rsiV.toFixed(1) + " · " + tag, cls: cls });
+    } else {
+      out.chips.push({ text: "RSI(14) 数据不足", cls: "" });
+    }
+    if (ma20v !== null && ma20v !== undefined && price > 0) {
+      var d = (price / ma20v - 1) * 100;
+      out.chips.push({ text: "股价 " + (d >= 0 ? "高于" : "低于") + " MA20 " + Math.abs(d).toFixed(1) + "%", cls: "" });
+    }
+    if (price >= out.sell && price > 0) out.chips.push({ text: "已进入卖出区间", cls: "hot" });
+    if (price <= out.buy && price > 0 && rounds.openShares > 0) out.chips.push({ text: "已到建议买回价", cls: "cold" });
+
+    return out;
+  }
+
+  /* ================= chart ================= */
+
+  var canvas = $("chart"), ctx = canvas.getContext("2d");
+  var chartLayout = null;
+  var hoverI = -1;
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function visibleHist() {
+    if (!state.hist) return null;
+    var n = state.rangeN;
+    var len = state.hist.t.length;
+    var from = n > 0 ? Math.max(0, len - n) : 0;
+    return {
+      from: from,
+      t: state.hist.t.slice(from), o: state.hist.o.slice(from), h: state.hist.h.slice(from),
+      l: state.hist.l.slice(from), c: state.hist.c.slice(from), v: state.hist.v.slice(from)
+    };
+  }
+
+  function drawChart() {
+    if (state.mode !== "live" || !state.hist) return;
+    var vis = visibleHist();
+    var n = vis.t.length;
+    if (!n) return;
+
+    // indicators on FULL history, then slice (so MA/RSI are correct at range start)
+    var full = state.hist;
+    var ma5A = sma(full.c, 5), ma10A = sma(full.c, 10), ma20A = sma(full.c, 20);
+    var m = macd(full.c), rsiA = rsi(full.c, 14);
+    var sl = function (a) { return a.slice(vis.from); };
+    var ma5 = sl(ma5A), ma10 = sl(ma10A), ma20 = sl(ma20A);
+    var dif = sl(m.dif), dea = sl(m.dea), hist = sl(m.hist), rsiS = sl(rsiA);
+
+    var wrap = $("chartWrap");
+    var W = wrap.clientWidth;
+    var priceH = 240, volH = 44, macdH = 84, rsiH = 64, gap = 14, padT = 8, padB = 20;
+    var H = padT + priceH + volH + gap + macdH + gap + rsiH + padB;
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    var padL = 8, padR = 52;
+    var plotW = W - padL - padR;
+    var bw = plotW / n;
+    var cw = Math.max(1, Math.min(bw * 0.62, 14));
+    var xAt = function (i) { return padL + bw * i + bw / 2; };
+
+    var gain = cssVar("--gain-mark"), loss = cssVar("--loss");
+    var muted = cssVar("--text-muted"), grid = cssVar("--grid");
+    var ma5c = cssVar("--ma5"), ma10c = cssVar("--ma10"), ma20c = cssVar("--ma20");
+
+    // ---- price panel scale (include MA + suggestion lines when near range)
+    var lo = Math.min.apply(null, vis.l), hi = Math.max.apply(null, vis.h);
+    [ma5, ma10, ma20].forEach(function (a) {
+      a.forEach(function (v) { if (v !== null) { if (v < lo) lo = v; if (v > hi) hi = v; } });
+    });
+    var pad = (hi - lo) * 0.06 || 1;
+    lo -= pad; hi += pad;
+    var py = function (v) { return padT + (hi - v) / (hi - lo) * priceH; };
+
+    ctx.font = "11px system-ui, sans-serif";
+
+    // grid + y labels (price)
+    ctx.strokeStyle = grid; ctx.fillStyle = muted; ctx.lineWidth = 1;
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    for (var g = 0; g <= 4; g++) {
+      var gv = lo + (hi - lo) * g / 4, gy = py(gv);
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + plotW, gy); ctx.stroke();
+      ctx.fillText(gv.toFixed(gv >= 1000 ? 0 : 2), padL + plotW + 6, gy);
+    }
+
+    // x date ticks
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    var step = Math.max(1, Math.ceil(n / 6));
+    for (var ti = 0; ti < n; ti += step) {
+      var dt = new Date(vis.t[ti]);
+      ctx.fillText((dt.getMonth() + 1) + "/" + dt.getDate(), xAt(ti), H - padB + 6);
+    }
+
+    // volume (bottom of price panel)
+    var vmax = Math.max.apply(null, vis.v) || 1;
+    var volTop = padT + priceH;
+    for (var i = 0; i < n; i++) {
+      var up = vis.c[i] >= vis.o[i];
+      ctx.fillStyle = up ? gain : loss;
+      ctx.globalAlpha = 0.45;
+      var vh = vis.v[i] / vmax * volH;
+      ctx.fillRect(xAt(i) - cw / 2, volTop + volH - vh, cw, vh);
+      ctx.globalAlpha = 1;
+    }
+
+    // candles
+    for (i = 0; i < n; i++) {
+      up = vis.c[i] >= vis.o[i];
+      var col = up ? gain : loss;
+      ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1;
+      var x = xAt(i);
+      ctx.beginPath(); ctx.moveTo(x, py(vis.h[i])); ctx.lineTo(x, py(vis.l[i])); ctx.stroke();
+      var yO = py(vis.o[i]), yC = py(vis.c[i]);
+      var top = Math.min(yO, yC), bh = Math.max(Math.abs(yC - yO), 1);
+      ctx.fillRect(x - cw / 2, top, cw, bh);
+    }
+
+    // MA lines
+    function line(arr, color, yFn) {
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+      var started = false;
+      for (var i = 0; i < n; i++) {
+        if (arr[i] === null || arr[i] === undefined) continue;
+        var x = xAt(i), y = yFn(arr[i]);
+        if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    line(ma5, ma5c, py); line(ma10, ma10c, py); line(ma20, ma20c, py);
+
+    // ---- MACD panel
+    var mTop = padT + priceH + volH + gap;
+    var mAbs = 0;
+    for (i = 0; i < n; i++) {
+      mAbs = Math.max(mAbs, Math.abs(dif[i] || 0), Math.abs(dea[i] || 0), Math.abs(hist[i] || 0));
+    }
+    mAbs = mAbs || 1;
+    var my = function (v) { return mTop + macdH / 2 - v / mAbs * (macdH / 2 - 4); };
+    ctx.strokeStyle = grid; ctx.beginPath(); ctx.moveTo(padL, my(0)); ctx.lineTo(padL + plotW, my(0)); ctx.stroke();
+    for (i = 0; i < n; i++) {
+      var hv = hist[i] || 0;
+      ctx.fillStyle = hv >= 0 ? gain : loss;
+      var hy = my(hv);
+      ctx.fillRect(xAt(i) - Math.max(cw / 2 - 1, 0.5), Math.min(hy, my(0)), Math.max(cw - 2, 1), Math.abs(hy - my(0)) || 1);
+    }
+    line(dif, ma5c, my); line(dea, ma10c, my);
+    ctx.fillStyle = muted; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("MACD(12,26,9)", padL, mTop - 12);
+
+    // ---- RSI panel
+    var rTop = mTop + macdH + gap;
+    var ry = function (v) { return rTop + (100 - v) / 100 * rsiH; };
+    ctx.strokeStyle = grid;
+    [30, 70].forEach(function (lvl) {
+      ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(padL, ry(lvl)); ctx.lineTo(padL + plotW, ry(lvl)); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = muted; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(String(lvl), padL + plotW + 6, ry(lvl));
+    });
+    line(rsiS, ma20c, ry);
+    ctx.fillStyle = muted; ctx.textBaseline = "top";
+    ctx.fillText("RSI(14)", padL, rTop - 12);
+
+    // crosshair
+    if (hoverI >= 0 && hoverI < n) {
+      var hx = xAt(hoverI);
+      ctx.strokeStyle = muted; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(hx, padT); ctx.lineTo(hx, H - padB); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    chartLayout = {
+      n: n, padL: padL, plotW: plotW, bw: bw, W: W, vis: vis,
+      ma5: ma5, ma10: ma10, ma20: ma20, dif: dif, dea: dea, hist: hist, rsi: rsiS
+    };
+
+    // legend
+    var li = hoverI >= 0 && hoverI < n ? hoverI : n - 1;
+    var fmtMA = function (v) { return v === null || v === undefined ? "--" : v.toFixed(2); };
+    $("legend").innerHTML =
+      '<span><span class="sw" style="background:' + ma5c + '"></span>MA5 ' + fmtMA(ma5[li]) + "</span>" +
+      '<span><span class="sw" style="background:' + ma10c + '"></span>MA10 ' + fmtMA(ma10[li]) + "</span>" +
+      '<span><span class="sw" style="background:' + ma20c + '"></span>MA20 ' + fmtMA(ma20[li]) + "</span>" +
+      "<span>DIF " + fmtMA(dif[li]) + "</span><span>DEA " + fmtMA(dea[li]) + "</span>" +
+      "<span>RSI " + fmtMA(rsiS[li]) + "</span>";
+    $("chipBars").textContent = n + " 根日线";
+  }
+
+  canvas.addEventListener("mousemove", function (e) {
+    if (!chartLayout) return;
+    var rect = canvas.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var i = Math.floor((x - chartLayout.padL) / chartLayout.bw);
+    if (i < 0 || i >= chartLayout.n) { hideTip(); return; }
+    if (i !== hoverI) { hoverI = i; drawChart(); }
+    var v = chartLayout.vis, tip = $("chartTip");
+    var d = new Date(v.t[i]);
+    var chg = i > 0 ? (v.c[i] / v.c[i - 1] - 1) * 100 : (v.c[i] / v.o[i] - 1) * 100;
+    tip.innerHTML =
+      "<b>" + d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate() + "</b><br>" +
+      "开 " + v.o[i].toFixed(2) + " 高 " + v.h[i].toFixed(2) + "<br>" +
+      "低 " + v.l[i].toFixed(2) + " 收 " + v.c[i].toFixed(2) +
+      ' <span class="' + pnlClass(chg) + '">' + pct(chg, true) + "</span><br>" +
+      "量 " + (v.v[i] >= 1e6 ? (v.v[i] / 1e6).toFixed(1) + "M" : Math.round(v.v[i] / 1000) + "K");
+    tip.style.display = "block";
+    var tw = tip.offsetWidth;
+    var left = x + 14 + tw > chartLayout.W ? x - tw - 14 : x + 14;
+    tip.style.left = left + "px";
+    tip.style.top = "12px";
+  });
+  canvas.addEventListener("mouseleave", hideTip);
+  function hideTip() {
+    if (hoverI !== -1) { hoverI = -1; drawChart(); }
+    $("chartTip").style.display = "none";
+  }
+
+  window.addEventListener("resize", function () { drawChart(); });
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { drawChart(); });
+  }
+
+  $("rangeRow").addEventListener("click", function (e) {
+    var btn = e.target.closest(".range-btn");
+    if (!btn) return;
+    state.rangeN = parseInt(btn.getAttribute("data-n"), 10);
+    document.querySelectorAll(".range-btn").forEach(function (b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    hoverI = -1;
+    render();
+  });
+
+  /* ================= render ================= */
 
   var SELL_FRACTIONS = [
     { label: "¼ 仓", f: 0.25 },
@@ -356,117 +1080,224 @@
     { label: "全部", f: 1 }
   ];
 
-  var PULLBACKS = [0.03, 0.05, 0.08, 0.10];
-
   function render() {
-    var price  = num(inputs.price);
-    var cost   = num(inputs.cost);
+    var price = currentPrice();
+    var cost = num(inputs.cost);
     var shares = Math.floor(num(inputs.shares));
-    var fee    = num(inputs.fee);
+    var fee = num(inputs.fee);
 
     var totalCost = cost * shares;
-    var value     = price * shares;
-    var pnl       = value - totalCost;
-    var pnlPct    = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+    var value = price * shares;
+    var pnl = value - totalCost;
+    var pnlPct = totalCost > 0 ? pnl / totalCost * 100 : 0;
 
     $("chipCost").textContent = cost.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
-    $("heroPrice").textContent = money(price, 2);
+    $("heroPrice").textContent = price > 0 ? money(price, 2) : "--";
     var hd = $("heroDelta");
-    hd.textContent = pct(pnlPct, true);
-    hd.className = "delta " + pnlClass(pnl);
+    if (state.live && state.live.changePct !== null && state.live.changePct !== undefined) {
+      hd.textContent = pct(state.live.changePct, true) + " 今日";
+      hd.className = "delta " + pnlClass(state.live.changePct);
+    } else if (price > 0 && totalCost > 0) {
+      hd.textContent = pct(pnlPct, true);
+      hd.className = "delta " + pnlClass(pnl);
+    } else { hd.textContent = ""; }
 
-    $("kpiCost").textContent  = money(totalCost);
-    $("kpiValue").textContent = money(value);
+    var sub = [];
+    if (state.live) {
+      if (state.live.bid != null && state.live.ask != null)
+        sub.push("买一 " + state.live.bid.toFixed(2) + " / 卖一 " + state.live.ask.toFixed(2));
+      if (state.live.volume != null)
+        sub.push("成交量 " + (state.live.volume >= 1e6 ? (state.live.volume / 1e6).toFixed(1) + "M" : Math.round(state.live.volume / 1000) + "K"));
+      if (totalCost > 0) sub.push("持仓浮盈 " + pct(pnlPct, true));
+    }
+    $("heroSub").textContent = sub.join(" · ");
+    var chipLive = $("chipLive");
+    if (state.mode === "live") { chipLive.style.display = ""; chipLive.className = "chip live"; chipLive.textContent = "LIVE"; }
+    else chipLive.style.display = "none";
+
+    $("kpiCost").textContent = money(totalCost);
+    $("kpiValue").textContent = price > 0 ? money(value) : "--";
     var kp = $("kpiPnl");
-    kp.textContent = signedMoney(pnl);
+    kp.textContent = price > 0 ? signedMoney(pnl) : "--";
     kp.className = "t-value " + pnlClass(pnl);
     var kc = $("kpiPct");
-    kc.textContent = pct(pnlPct, true);
+    kc.textContent = price > 0 ? pct(pnlPct, true) : "--";
     kc.className = "t-value " + pnlClass(pnl);
 
-    /* 分批卖出净利润 */
-    var sellRows = SELL_FRACTIONS.map(function (t) {
-      var n = Math.floor(shares * t.f);
-      if (n < 1) return "";
-      var proceeds = n * price;
-      var net = (price - cost) * n - fee;
-      return "<tr><td>" + t.label + "</td><td>" + n + "</td><td>" + money(proceeds) +
-             "</td><td class='" + pnlClass(net) + "'>" + signedMoney(net) + "</td></tr>";
+    /* signals */
+    var sig = computeSignals();
+    $("sigSell").textContent = money(sig.sell, 2);
+    $("sigSellRefs").innerHTML = sig.sellRefs.join("<br>");
+    $("sigBuy").textContent = money(sig.buy, 2);
+    $("sigBuyRefs").innerHTML = sig.buyRefs.join("<br>");
+    $("sigChips").innerHTML = sig.chips.map(function (c) {
+      return '<span class="sig-chip ' + c.cls + '">' + c.text + "</span>";
     }).join("");
-    $("tblSell").innerHTML = sellRows ||
-      "<tr><td colspan='4' class='empty-state'>请先输入持仓股数</td></tr>";
 
-    /* 卖出后建议回补价位 — 以半仓卖出所得资金计算 */
-    var halfShares = Math.floor(shares * 0.5);
-    var proceeds = halfShares * price - fee;
-    var rebuyRows = PULLBACKS.map(function (p) {
-      var rp = price * (1 - p);
-      if (rp <= 0) return "";
-      var vsCost = cost > 0 ? ((rp - cost) / cost) * 100 : 0;
-      var canBuy = halfShares > 0 ? Math.floor(proceeds / rp) : 0;
-      var extra = canBuy - halfShares;
-      return "<tr><td>-" + (p * 100).toFixed(0) + "%</td><td>" + money(rp, 2) +
-             "</td><td class='" + pnlClass(vsCost) + "'>" + pct(vsCost, true) +
-             "</td><td>" + canBuy + "</td><td class='" + pnlClass(extra) + "'>" +
-             (extra >= 0 ? "+" : "") + extra + "</td></tr>";
+    /* tranche sell table */
+    var rows = SELL_FRACTIONS.map(function (t) {
+      var nS = Math.floor(shares * t.f);
+      if (nS < 1) return "";
+      var proceeds = nS * price;
+      var net = (price - cost) * nS - fee;
+      return "<tr><td>" + t.label + "</td><td>" + nS + "</td><td>" + money(proceeds) +
+        "</td><td class='" + pnlClass(net) + "'>" + signedMoney(net) + "</td></tr>";
     }).join("");
-    $("tblRebuy").innerHTML = rebuyRows;
+    $("tblSell").innerHTML = rows || "<tr><td colspan='4' class='empty-state'>请先输入持仓股数</td></tr>";
 
-    renderTrades(totalCost);
+    renderTrades(totalCost, pnl, price);
+    drawChart();
   }
 
-  function renderTrades(totalCost) {
+  function renderTrades(totalCost, unrealized, price) {
+    var rounds = computeRounds();
+
+    // per-buy round profit for display: recompute matching to attribute lots to buys
+    var lotByBuy = [], openQueue = [], li = 0;
+    trades.forEach(function (t, idx) {
+      if (t.type === "sell") { openQueue.push({ price: t.price, remaining: t.shares }); lotByBuy[idx] = null; }
+      else {
+        var profit = 0, matched = 0;
+        while (matched < t.shares && li < rounds.lots.length) {
+          var lot = rounds.lots[li];
+          profit += lot.profit; matched += lot.qty; li++;
+        }
+        lotByBuy[idx] = { profit: profit, matched: matched };
+      }
+    });
+
     var body = $("tblLog");
     body.innerHTML = trades.map(function (t, i) {
-      return "<tr><td>" + t.date + "</td><td>" + money(t.price, 2) + "</td><td>" + t.shares +
-             "</td><td class='" + pnlClass(t.net) + "'>" + signedMoney(t.net) +
-             "</td><td><button class='btn-del' data-i='" + i + "' title='删除'>✕</button></td></tr>";
+      var dateStr = t.ts ? fmtDate(t.ts) : (t.legacyDate || "--");
+      var isSell = t.type === "sell";
+      var pnlCell, statusCell;
+      if (isSell) {
+        pnlCell = "<td class='" + pnlClass(t.net || 0) + "'>" + signedMoney(t.net || 0) + "</td>";
+        statusCell = "<td><span class='badge sell'>已卖出</span></td>";
+      } else {
+        var lb = lotByBuy[i];
+        pnlCell = lb && lb.matched > 0
+          ? "<td class='" + pnlClass(lb.profit) + "'>" + signedMoney(lb.profit) + "</td>"
+          : "<td>--</td>";
+        statusCell = "<td><span class='badge buy'>" + (lb && lb.matched > 0 ? "回合完成" : "加仓") + "</span></td>";
+      }
+      return "<tr><td>" + dateStr + "</td><td>" + (isSell ? "卖出" : "买回") + "</td><td>" + money(t.price, 2) +
+        "</td><td>" + t.shares + "</td>" + pnlCell + statusCell +
+        "<td><button class='btn-del' data-i='" + i + "' title='删除'>✕</button></td></tr>";
     }).join("");
+    if (rounds.openShares > 0) {
+      body.innerHTML += "<tr><td colspan='7' style='text-align:left'><span class='badge open'>待回补 " +
+        rounds.openShares + " 股</span></td></tr>";
+    }
     $("logEmpty").style.display = trades.length ? "none" : "";
 
-    var realized = trades.reduce(function (s, t) { return s + t.net; }, 0);
+    var realized = realizedProfit();
     var sp = $("statProfit");
     sp.textContent = money(realized);
     sp.className = "t-value " + (realized > 0 ? "pos" : realized < 0 ? "neg" : "");
-    $("statCount").textContent = trades.length;
-    $("statReturn").textContent = pct(totalCost > 0 ? (realized / totalCost) * 100 : 0);
+
+    var su = $("statUnreal");
+    su.textContent = price > 0 ? signedMoney(unrealized) : "--";
+    su.className = "t-value " + pnlClass(unrealized);
+
+    var base = state.baseline || totalCost;
+    $("statReturn").textContent = pct(base > 0 ? realized / base * 100 : 0);
+    $("statBase").textContent = state.baseline ? "初始本金 " + money(state.baseline) : "已实现 ÷ 当前总成本";
+
+    var st = $("statTotal");
+    if (base > 0 && price > 0) {
+      var tot = (realized + unrealized) / base * 100;
+      st.textContent = pct(tot, true);
+      st.className = "t-value " + pnlClass(tot);
+    } else { st.textContent = "--"; st.className = "t-value"; }
+
+    /* risk metrics */
+    var dd = $("riskDd");
+    if (state.hist && state.hist.c.length >= 2) {
+      var vis = visibleHist();
+      var r = maxDrawdown(vis.c);
+      dd.textContent = "-" + r.pct.toFixed(1) + "%";
+      dd.className = "t-value neg";
+      var f = new Date(vis.t[r.from]), tD = new Date(vis.t[r.to]);
+      $("riskDdSub").textContent = (f.getMonth() + 1) + "/" + f.getDate() + " → " + (tD.getMonth() + 1) + "/" + tD.getDate() +
+        " · " + vis.c.length + " 根日线";
+    } else { dd.textContent = "--"; dd.className = "t-value"; $("riskDdSub").textContent = "需要行情历史数据"; }
+
+    var lots = rounds.lots;
+    var wins = lots.filter(function (l) { return l.profit > 0; });
+    var losses = lots.filter(function (l) { return l.profit <= 0; });
+    if (lots.length) {
+      $("riskWin").textContent = (wins.length / lots.length * 100).toFixed(0) + "%";
+      $("riskWinSub").textContent = wins.length + " 胜 / " + lots.length + " 回合";
+      var avgW = wins.length ? wins.reduce(function (s, l) { return s + l.profit; }, 0) / wins.length : 0;
+      var avgL = losses.length ? Math.abs(losses.reduce(function (s, l) { return s + l.profit; }, 0) / losses.length) : 0;
+      $("riskPl").textContent = losses.length === 0 ? "∞" : avgL > 0 ? (avgW / avgL).toFixed(2) : "--";
+      var avgAll = lots.reduce(function (s, l) { return s + l.profit; }, 0) / lots.length;
+      var ra = $("riskAvg");
+      ra.textContent = signedMoney(avgAll);
+      ra.className = "t-value " + pnlClass(avgAll);
+    } else {
+      $("riskWin").textContent = "--"; $("riskWinSub").textContent = "完成一轮卖出+买回后显示";
+      $("riskPl").textContent = "--"; $("riskAvg").textContent = "--"; $("riskAvg").className = "t-value";
+    }
+
+    $("statCountHidden") && ($("statCountHidden").textContent = trades.length);
   }
 
-  /* ---------- events ---------- */
+  /* ================= events ================= */
 
-  Object.keys(inputs).forEach(function (k) {
+  ["price", "cost", "shares", "fee", "wave", "pull"].forEach(function (k) {
     inputs[k].addEventListener("input", function () { saveState(); render(); });
   });
 
+  inputs.ticker.addEventListener("change", function () {
+    var q = inputs.ticker.value.trim().toUpperCase();
+    inputs.ticker.value = q;
+    saveState();
+    if (!q) return;
+    if (state.mode === "live" || state.mode === "detecting") {
+      if (window.claude && window.claude.mcp) resolveTicker(q);
+    } else {
+      $("hdrSymbol").textContent = q;
+    }
+  });
+
+  $("segSell").addEventListener("click", function () { setLogType("sell"); });
+  $("segBuy").addEventListener("click", function () { setLogType("buy"); });
+  function setLogType(t) {
+    state.logType = t;
+    $("segSell").className = t === "sell" ? "active sell" : "";
+    $("segBuy").className = t === "buy" ? "active buy" : "buy";
+    $("segBuy").classList.add("buy");
+    $("btnLog").textContent = t === "sell" ? "＋ 记录卖出" : "＋ 记录买回";
+    var p = currentPrice();
+    if (p > 0) $("logPrice").placeholder = p.toFixed(2);
+  }
+
   $("btnLog").addEventListener("click", function () {
-    var price  = parseFloat($("logPrice").value);
+    var priceEl = $("logPrice");
+    var price = parseFloat(priceEl.value);
+    if ((!isFinite(price) || price <= 0) && currentPrice() > 0) price = currentPrice();
     var shares = Math.floor(parseFloat($("logShares").value));
     if (!isFinite(price) || price <= 0 || !isFinite(shares) || shares < 1) {
-      alert("请输入有效的卖出价和卖出股数");
+      alert("请输入有效的价格和股数（价格留空时使用当前实时价）");
       return;
     }
-    var cost = num(inputs.cost);
-    var fee  = num(inputs.fee);
-    var d = new Date();
-    trades.push({
-      date: (d.getMonth() + 1) + "/" + d.getDate() + " " +
-            String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"),
-      price: price,
-      shares: shares,
-      net: (price - cost) * shares - fee
-    });
-    saveTrades();
-    $("logPrice").value = "";
-    $("logShares").value = "";
+    if (state.logType === "sell" && shares > Math.floor(num(inputs.shares))) {
+      if (!confirm("卖出股数超过当前持仓（" + Math.floor(num(inputs.shares)) + " 股），仍要记录吗？")) return;
+    }
+    recordTrade(state.logType, price, shares);
+    priceEl.value = ""; $("logShares").value = "";
     render();
   });
 
   $("btnClear").addEventListener("click", function () {
     if (!trades.length) return;
-    if (confirm("确定清空全部交易记录？此操作不可撤销。")) {
+    if (confirm("确定清空全部交易记录？此操作不可撤销（持仓数据不受影响）。")) {
       trades = [];
-      saveTrades();
+      state.baseline = null;
+      saveTrades(); saveState();
       render();
     }
   });
@@ -474,12 +1305,25 @@
   $("tblLog").addEventListener("click", function (e) {
     var btn = e.target.closest ? e.target.closest(".btn-del") : null;
     if (!btn) return;
+    if (!confirm("删除这条记录？持仓股数与建仓均价不会自动回滚。")) return;
     trades.splice(parseInt(btn.getAttribute("data-i"), 10), 1);
     saveTrades();
     render();
   });
 
+  /* ================= boot ================= */
+
+  setLogType("sell");
   render();
+  initLive();
+
+  // test hook (harmless in production)
+  window.__panel = {
+    state: state,
+    trades: function () { return trades; },
+    rounds: computeRounds,
+    indicators: { sma: sma, ema: ema, macd: macd, rsi: rsi, maxDrawdown: maxDrawdown }
+  };
 })();
 </script>
 </body>
