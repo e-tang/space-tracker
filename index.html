@@ -234,6 +234,8 @@
       <button class="range-btn" data-n="66">3月</button>
       <button class="range-btn" data-n="132">6月</button>
       <button class="range-btn active" data-n="0">全部</button>
+      <button class="range-btn" id="btnPull" title="从 Yahoo Finance 拉取最近一年的日线数据">⟳ 拉取 EOD</button>
+      <span class="data-msg" id="pullMsg"></span>
       <span style="flex:1"></span>
       <span class="chip" id="chipBars"></span>
     </div>
@@ -563,11 +565,86 @@
   function loadHist() {
     var custom = loadJSON(HIST_KEY, null);
     if (custom && custom.rows && custom.rows.length) {
-      state.hist = histFromRows(custom.rows, "custom");
+      state.hist = histFromRows(custom.rows, custom.source || "custom");
     } else {
       state.hist = histFromRows(embeddedRows(), "embedded");
     }
   }
+
+  /* ---------- EOD pull (Yahoo Finance) ---------- */
+
+  function fetchJson(url, ms) {
+    return new Promise(function (resolve, reject) {
+      if (typeof fetch !== "function") { reject(new Error("no fetch")); return; }
+      var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+      var to = setTimeout(function () { if (ctrl) ctrl.abort(); reject(new Error("timeout")); }, ms);
+      fetch(url, ctrl ? { signal: ctrl.signal } : undefined).then(function (r) {
+        clearTimeout(to);
+        if (!r.ok) { reject(new Error("HTTP " + r.status)); return; }
+        resolve(r.json());
+      }, function (e) { clearTimeout(to); reject(e); });
+    });
+  }
+
+  function parseYahooChart(json) {
+    var res = json && json.chart && json.chart.result && json.chart.result[0];
+    if (!res || !res.timestamp || !res.indicators || !res.indicators.quote) return null;
+    var q = res.indicators.quote[0] || {};
+    var rows = [];
+    for (var i = 0; i < res.timestamp.length; i++) {
+      var o = q.open && q.open[i], h = q.high && q.high[i],
+          l = q.low && q.low[i], c = q.close && q.close[i],
+          v = q.volume && q.volume[i];
+      if ([o, h, l, c].some(function (x) { return x === null || x === undefined || !isFinite(x); })) continue;
+      var r4 = function (x) { return Math.round(x * 10000) / 10000; };
+      rows.push({
+        date: new Date(res.timestamp[i] * 1000).toISOString().slice(0, 10),
+        o: r4(o), h: r4(h), l: r4(l), c: r4(c),
+        v: isFinite(v) ? v : 0
+      });
+    }
+    return rows.length ? rows : null;
+  }
+
+  function pullEod() {
+    var sym = (inputs.ticker.value || "SPCX").trim().toUpperCase();
+    var base = "https://query1.finance.yahoo.com/v8/finance/chart/" +
+      encodeURIComponent(sym) + "?interval=1d&range=1y";
+    var attempts = [
+      base,
+      base.replace("query1", "query2"),
+      "https://api.allorigins.win/raw?url=" + encodeURIComponent(base)
+    ];
+    var btn = $("btnPull"), msg = $("pullMsg");
+    btn.disabled = true;
+    var label = btn.textContent;
+    btn.textContent = "拉取中…";
+    msg.className = "data-msg";
+    msg.textContent = "";
+
+    var tryNext = function (i) {
+      if (i >= attempts.length) {
+        btn.disabled = false; btn.textContent = label;
+        msg.className = "data-msg err";
+        msg.textContent = "无法访问 Yahoo Finance：claude.ai 分享页面禁止对外请求，普通浏览器也受 Yahoo 跨域限制。请改用下方“更新历史数据”粘贴，或在对话中让 Claude 刷新内置数据。";
+        return;
+      }
+      fetchJson(attempts[i], 8000).then(function (json) {
+        var rows = parseYahooChart(json);
+        if (!rows) { tryNext(i + 1); return; }
+        localStorage.setItem(HIST_KEY, JSON.stringify({ rows: rows, source: "yahoo" }));
+        loadHist();
+        btn.disabled = false; btn.textContent = label;
+        msg.className = "data-msg";
+        msg.textContent = "已拉取 " + sym + " " + rows.length + " 根日线";
+        hoverI = -1;
+        render();
+      }, function () { tryNext(i + 1); });
+    };
+    tryNext(0);
+  }
+
+  $("btnPull").addEventListener("click", pullEod);
 
   function parseCsv(text) {
     var rows = [], errs = [];
@@ -956,7 +1033,9 @@
       '<span><span class="sw" style="background:' + ma20c + '"></span>MA20 ' + fmtMA(ma20[li]) + "</span>" +
       "<span>DIF " + fmtMA(dif[li]) + "</span><span>DEA " + fmtMA(dea[li]) + "</span>" +
       "<span>RSI " + fmtMA(rsiS[li]) + "</span>";
-    $("chipBars").textContent = n + " 根日线 · 截至 " + (state.hist.asOf || "--");
+    var srcLabel = state.hist.source === "yahoo" ? " · Yahoo" :
+                   state.hist.source === "custom" ? " · 自定义" : " · 内置";
+    $("chipBars").textContent = n + " 根日线 · 截至 " + (state.hist.asOf || "--") + srcLabel;
   }
 
   canvas.addEventListener("mousemove", function (e) {
